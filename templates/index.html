@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ .title }}</h1>
+    </div>
+
+    <div class="content">
+        <h2>欢迎使用 Go Framework</h2>
+        <p>这是一个基于 Go 语言和 Gin 框架的 Web 应用框架。</p>
+        <p>当前时间: {{ .now }}</p>
+        <p>消息: {{ .message }}</p>
+        
+        <h3>功能列表:</h3>
+        <ul>
+            {{range .features}}
+                <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p>&copy; {{ .year }} Go Framework. 保留所有权利。</p>
+    </div>
+</body>
+</html> 
