@@ -35,11 +35,6 @@ func (router *Router) Route() *gin.Engine {
 	r.Use(middleware.SecurityMiddleware()) // 安全相关头部
 	r.Use(middleware.SessionMiddleware())  // 会话管理
 
-	// 根据配置启用 CORS
-	if cfg.Server.Mode == "debug" {
-		r.Use(middleware.CORSMiddleware()) // 允许跨域，仅在开发环境启用
-	}
-
 	// 根据配置启用 gzip 压缩
 	if cfg.Gzip.Enabled {
 		r.Use(middleware.GzipWithLevelMiddleware(cfg.Gzip.Level))
