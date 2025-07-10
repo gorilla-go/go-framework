@@ -1,9 +1,10 @@
 package middleware
 
 import (
-	"regexp"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,11 +15,28 @@ type RouteBuilder struct {
 	group  *gin.RouterGroup
 }
 
-// 路由参数定义
-type routeParam struct {
-	Name    string
-	Pattern string
+// RouterAnnotation 路由注册接口
+// 所有需要注册路由的控制器都应实现此接口
+type RouterAnnotation interface {
+	// Annotation 注册路由
+	// rb 是路由构建器
+	// 每个控制器负责注册自己的路由
+	Annotation(rb *RouteBuilder)
 }
+
+// Route 路由信息
+type Route struct {
+	Name    string
+	Path    string
+	Method  string
+	Handler gin.HandlerFunc
+}
+
+// 全局路由注册表
+var (
+	routes      = make(map[string]*Route)
+	routesMutex sync.RWMutex
+)
 
 // NewRouteBuilder 创建路由构建器
 func NewRouteBuilder(router *gin.Engine) *RouteBuilder {
@@ -35,112 +53,134 @@ func (rb *RouteBuilder) Group(path string) *RouteBuilder {
 	}
 }
 
-// 解析路由路径，提取参数和模式
-// 将类似 "/user/<id:\\d+>" 的路由转换为 "/user/:id" 并返回参数验证器
-func (rb *RouteBuilder) parsePath(path string) (string, []routeParam) {
-	paramPattern := regexp.MustCompile(`<([^>:]+)(?::([^>]+))?>`)
-	matches := paramPattern.FindAllStringSubmatch(path, -1)
+// GET 注册GET请求路由，name参数用于在模板中使用route函数生成URL
+func (rb *RouteBuilder) GET(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("GET", path, name, handler)
+}
 
-	params := []routeParam{}
-	result := path
+// POST 注册POST请求路由，name参数用于在模板中使用route函数生成URL
+func (rb *RouteBuilder) POST(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("POST", path, name, handler)
+}
 
-	for _, match := range matches {
-		// 完整匹配的文本
-		fullMatch := match[0]
-		// 参数名
-		paramName := match[1]
-		// 正则模式（如果有）
-		paramPattern := ".*"
-		if len(match) > 2 && match[2] != "" {
-			paramPattern = match[2]
+// PUT 注册PUT请求路由，name参数用于在模板中使用route函数生成URL
+func (rb *RouteBuilder) PUT(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("PUT", path, name, handler)
+}
+
+// DELETE 注册DELETE请求路由，name参数用于在模板中使用route函数生成URL
+func (rb *RouteBuilder) DELETE(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("DELETE", path, name, handler)
+}
+
+// 注册路由，内部函数
+func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.HandlerFunc) {
+	// 如果没有提供名称，使用默认命名规则
+	if name == "" {
+		name = fmt.Sprintf("%s:%s", method, path)
+	}
+
+	// 注册到gin
+	switch method {
+	case "GET":
+		if rb.group != nil {
+			rb.group.GET(path, handler)
+		} else {
+			rb.router.GET(path, handler)
 		}
-
-		// 将 <param:pattern> 替换为 :param
-		result = strings.Replace(result, fullMatch, ":"+paramName, 1)
-
-		// 添加到参数列表
-		params = append(params, routeParam{
-			Name:    paramName,
-			Pattern: paramPattern,
-		})
+	case "POST":
+		if rb.group != nil {
+			rb.group.POST(path, handler)
+		} else {
+			rb.router.POST(path, handler)
+		}
+	case "PUT":
+		if rb.group != nil {
+			rb.group.PUT(path, handler)
+		} else {
+			rb.router.PUT(path, handler)
+		}
+	case "DELETE":
+		if rb.group != nil {
+			rb.group.DELETE(path, handler)
+		} else {
+			rb.router.DELETE(path, handler)
+		}
 	}
 
-	return result, params
-}
+	// 记录路由信息
+	routesMutex.Lock()
+	defer routesMutex.Unlock()
 
-// 创建参数验证中间件
-func createParamValidators(params []routeParam) []gin.HandlerFunc {
-	validators := []gin.HandlerFunc{}
-
-	for _, param := range params {
-		pattern := regexp.MustCompile(param.Pattern)
-
-		validators = append(validators, func(c *gin.Context) {
-			value := c.Param(param.Name)
-			if !pattern.MatchString(value) {
-				c.AbortWithStatusJSON(400, gin.H{
-					"code":    400,
-					"message": "参数 " + param.Name + " 格式不正确",
-					"data":    nil,
-				})
-				return
-			}
-			c.Next()
-		})
-	}
-
-	return validators
-}
-
-// GET 注册GET请求路由，支持Flask风格路径参数
-func (rb *RouteBuilder) GET(path string, handlers ...gin.HandlerFunc) {
-	ginPath, params := rb.parsePath(path)
-	validators := createParamValidators(params)
-
+	var fullPath string
 	if rb.group != nil {
-		rb.group.GET(ginPath, append(validators, handlers...)...)
+		// 获取路由组的路径前缀
+		groupPrefix := ""
+		if rb.group != nil && len(rb.group.Handlers) > 0 {
+			// Gin的路由组没有直接暴露前缀，这里需要一个变通的方法
+			// 实际项目中，你可能需要单独记录路由组前缀
+			groupPrefix = "/"
+		}
+		fullPath = groupPrefix + path
 	} else {
-		rb.router.GET(ginPath, append(validators, handlers...)...)
+		fullPath = path
+	}
+
+	routes[name] = &Route{
+		Name:    name,
+		Path:    fullPath,
+		Method:  method,
+		Handler: handler,
 	}
 }
 
-// POST 注册POST请求路由，支持Flask风格路径参数
-func (rb *RouteBuilder) POST(path string, handlers ...gin.HandlerFunc) {
-	ginPath, params := rb.parsePath(path)
-	validators := createParamValidators(params)
+// PATCH 注册PATCH请求路由
+func (rb *RouteBuilder) PATCH(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("PATCH", path, name, handler)
+}
 
+// HEAD 注册HEAD请求路由
+func (rb *RouteBuilder) HEAD(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("HEAD", path, name, handler)
+}
+
+// OPTIONS 注册OPTIONS请求路由
+func (rb *RouteBuilder) OPTIONS(path string, handler gin.HandlerFunc, name string) {
+	rb.registerRoute("OPTIONS", path, name, handler)
+}
+
+// ANY 注册所有HTTP方法路由
+func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
+	// 注册到gin
 	if rb.group != nil {
-		rb.group.POST(ginPath, append(validators, handlers...)...)
+		rb.group.Any(path, handler)
 	} else {
-		rb.router.POST(ginPath, append(validators, handlers...)...)
+		rb.router.Any(path, handler)
 	}
-}
 
-// PUT 注册PUT请求路由，支持Flask风格路径参数
-func (rb *RouteBuilder) PUT(path string, handlers ...gin.HandlerFunc) {
-	ginPath, params := rb.parsePath(path)
-	validators := createParamValidators(params)
+	// 记录路由信息
+	routesMutex.Lock()
+	defer routesMutex.Unlock()
 
+	var fullPath string
 	if rb.group != nil {
-		rb.group.PUT(ginPath, append(validators, handlers...)...)
+		// 获取路由组的路径前缀
+		groupPrefix := ""
+		if rb.group != nil && len(rb.group.Handlers) > 0 {
+			groupPrefix = "/"
+		}
+		fullPath = groupPrefix + path
 	} else {
-		rb.router.PUT(ginPath, append(validators, handlers...)...)
+		fullPath = path
+	}
+
+	routes[name] = &Route{
+		Name:    name,
+		Path:    fullPath,
+		Method:  "ANY",
+		Handler: handler,
 	}
 }
-
-// DELETE 注册DELETE请求路由，支持Flask风格路径参数
-func (rb *RouteBuilder) DELETE(path string, handlers ...gin.HandlerFunc) {
-	ginPath, params := rb.parsePath(path)
-	validators := createParamValidators(params)
-
-	if rb.group != nil {
-		rb.group.DELETE(ginPath, append(validators, handlers...)...)
-	} else {
-		rb.router.DELETE(ginPath, append(validators, handlers...)...)
-	}
-}
-
-// 其他HTTP方法可以按需添加...
 
 // ParseParam 将参数解析为指定类型
 func ParseParam(c *gin.Context, name string, defaultVal interface{}) interface{} {
@@ -177,4 +217,41 @@ func ParseParam(c *gin.Context, name string, defaultVal interface{}) interface{}
 	default:
 		return val
 	}
+}
+
+// BuildUrl 根据路由名称和参数生成URL
+func BuildUrl(name string, params ...map[string]interface{}) (string, error) {
+	routesMutex.RLock()
+	route, exists := routes[name]
+	routesMutex.RUnlock()
+
+	if !exists {
+		return "", fmt.Errorf("路由不存在: %s", name) // 路由不存在时返回错误
+	}
+
+	path := route.Path
+
+	// 替换参数
+	if len(params) > 0 {
+		for key, value := range params[0] {
+			paramPlaceholder := ":" + key
+			// 将参数值转换为字符串
+			var strValue string
+			switch v := value.(type) {
+			case string:
+				strValue = v
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+				strValue = fmt.Sprintf("%d", v)
+			case float32, float64:
+				strValue = fmt.Sprintf("%g", v)
+			case bool:
+				strValue = fmt.Sprintf("%t", v)
+			default:
+				strValue = fmt.Sprintf("%v", v)
+			}
+			path = strings.Replace(path, paramPlaceholder, strValue, -1)
+		}
+	}
+
+	return path, nil
 }

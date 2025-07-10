@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"go-framework/pkg/errors"
 	"go-framework/pkg/logger"
-	"go-framework/pkg/response"
-	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
@@ -25,14 +23,8 @@ func RecoveryMiddleware() gin.HandlerFunc {
 				// 创建内部服务器错误
 				appErr := errors.NewInternalServerError("服务器内部错误", fmt.Errorf("%v", r))
 
-				// 返回统一错误响应
-				resp := response.Response{
-					Code:    appErr.Code,
-					Message: appErr.Message,
-					Data:    nil,
-				}
-
-				c.AbortWithStatusJSON(http.StatusInternalServerError, resp)
+				// 使用通用错误处理函数
+				HandleAppError(c, appErr)
 			}
 		}()
 

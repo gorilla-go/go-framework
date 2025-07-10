@@ -3,7 +3,7 @@ package middleware
 import (
 	"bytes"
 	"go-framework/pkg/logger"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,11 +18,11 @@ func LoggerMiddleware() gin.HandlerFunc {
 		// 获取请求体
 		var requestBody []byte
 		if c.Request.Body != nil {
-			requestBody, _ = ioutil.ReadAll(c.Request.Body)
+			requestBody, _ = io.ReadAll(c.Request.Body)
 		}
 
 		// 重置请求体，因为读取后会清空
-		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 
 		// 创建自定义响应写入器
 		writer := &responseWriter{
@@ -39,7 +39,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 		latency := endTime.Sub(startTime)
 
 		// 请求信息
-		requestInfo := map[string]interface{}{
+		requestInfo := map[string]any{
 			"method":     c.Request.Method,
 			"path":       c.Request.URL.Path,
 			"query":      c.Request.URL.RawQuery,

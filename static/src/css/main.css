@@ -1,0 +1,502 @@
+/* main.css - 非关键路径样式，合并了style.css、layout.css和wiki.css */
+/* 导航菜单其余部分 */
+.navbar-nav {
+    display: flex;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar-nav li {
+    margin-left: 30px;
+    position: relative;
+}
+
+.navbar-nav a {
+    color: var(--navbar-text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    padding: 8px 0;
+    display: block;
+    position: relative;
+}
+
+.navbar-nav a:hover {
+    color: var(--navbar-hover);
+}
+
+.navbar-nav a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--navbar-hover);
+    transition: width 0.3s ease;
+}
+
+.navbar-nav a:hover::after {
+    width: 100%;
+}
+
+/* 移动菜单按钮 */
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: var(--navbar-text);
+    transition: all 0.3s ease;
+}
+
+/* 页脚 */
+.footer {
+    background-color: var(--footer-bg);
+    border-top: 1px solid var(--border-color);
+    color: var(--footer-text);
+    flex-shrink: 0;
+    padding: 40px 0;
+    margin-top: auto;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    text-align: center;
+}
+
+.footer-nav {
+    margin-bottom: 20px;
+}
+
+.footer-nav a {
+    color: var(--footer-text);
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.footer-nav a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.footer-copy {
+    font-size: 0.85em;
+    margin-bottom: 0;
+}
+
+/* 通用链接和排版样式 */
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #0550ae;
+    text-decoration: underline;
+}
+
+h2 {
+    font-size: 2rem;
+    margin-top: 1.5rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+    margin-top: 1.2rem;
+}
+
+p {
+    margin-bottom: 1rem;
+}
+
+ul, ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+
+/* 按钮样式 */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-weight: 500;
+}
+
+.btn:hover {
+    background-color: #0550ae;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* 表单样式 */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100%;
+    margin-bottom: 10px;
+    font-family: inherit;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* 提示框 */
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+/* 卡片样式 */
+.card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Wiki代码块样式 */
+:root {
+    /* 代码高亮颜色 - 已优化对比度 */
+    --code-keyword: #b01337;
+    --code-function: #5a32a3;
+    --code-string: #032f62;
+    --code-comment: #57606a;
+    --code-number: #044289;
+    --code-type: #116329;
+    --code-stdlib: #953800;
+    --code-template: #0550ae;
+    --code-line-number: #646b72;
+    --code-variable: #953800;
+    --code-option: #044289;
+    --code-interface: #5a32a3;
+    --code-punctuation: #24292e;
+    --code-identifier: #24292e;
+    
+    /* 语言标签颜色 */
+    --lang-go: #00668c;
+    --lang-bash: #346c0e;
+    --lang-bg: #e1e4e8;
+    
+    /* 阴影和过渡效果 */
+    --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    --hover-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* 框架功能卡片网格 */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.feature-card {
+    border-radius: 10px;
+    padding: 25px;
+    background-color: white;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.feature-card h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    font-size: 1.4em;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 12px;
+    margin-bottom: 15px;
+}
+
+.feature-card p {
+    color: #586069;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* 代码块样式 */
+.code-block {
+    background-color: var(--code-bg);
+    border-radius: 8px;
+    padding: 0;
+    margin: 20px 0;
+    overflow: auto;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px; /* 略微增加了字体大小 */
+    line-height: 1.4;
+    color: #24292e;
+    border: 1px solid var(--border-color);
+    position: relative;
+    max-height: 500px;
+}
+
+/* 语言标签 */
+.code-lang-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--lang-bg);
+    color: #444;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-bottom-left-radius: 4px;
+    user-select: none;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    z-index: 2;
+}
+
+/* 不同语言的代码块样式 */
+.code-block.lang-go .code-lang-label {
+    color: var(--lang-go);
+    font-weight: 700;
+}
+
+.code-block.lang-bash .code-lang-label {
+    color: var(--lang-bash);
+    font-weight: 700;
+}
+
+/* 高亮代码块 */
+.code-block pre.code-highlighted {
+    margin: 0;
+    padding: 12px 0;
+}
+
+/* 代码行 */
+.code-line {
+    display: flex;
+    width: 100%;
+}
+
+.code-line:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 行号 */
+.code-line-number {
+    user-select: none;
+    color: var(--code-line-number);
+    text-align: right;
+    padding: 0 8px;
+    min-width: 32px;
+    border-right: 1px solid var(--border-color);
+    opacity: 0.8;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* 代码内容 */
+.code-line-content {
+    padding: 0 12px;
+    white-space: pre;
+}
+
+/* 语法高亮 */
+.code-keyword {
+    color: var(--code-keyword);
+    font-weight: 600;
+}
+
+.code-function {
+    color: var(--code-function);
+}
+
+.code-string {
+    color: var(--code-string);
+}
+
+.code-comment {
+    color: var(--code-comment);
+    font-style: italic;
+}
+
+.code-number {
+    color: var(--code-number);
+}
+
+.code-type {
+    color: var(--code-type);
+    font-weight: 500;
+}
+
+.code-stdlib {
+    color: var(--code-stdlib);
+}
+
+.code-template {
+    color: var(--code-template);
+    font-weight: 600;
+}
+
+.code-variable {
+    color: var(--code-variable);
+    font-style: italic;
+}
+
+.code-option {
+    color: var(--code-option);
+}
+
+.code-interface {
+    color: var(--code-interface);
+    font-style: italic;
+}
+
+.code-punctuation {
+    color: var(--code-punctuation);
+}
+
+.code-identifier {
+    color: var(--code-identifier);
+}
+
+/* 示例卡片样式 */
+.example-card {
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 40px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.example-header {
+    padding: 20px 25px;
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.example-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.5em;
+}
+
+.example-body {
+    padding: 25px;
+    background-color: white;
+}
+
+.example-body p {
+    color: #586069;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .navbar-container {
+        height: 56px;
+    }
+    
+    .menu-toggle {
+        display: flex;
+    }
+    
+    .navbar-nav {
+        position: absolute;
+        top: 56px;
+        left: 0;
+        width: 100%;
+        background-color: var(--navbar-bg);
+        flex-direction: column;
+        padding: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .navbar-nav.active {
+        max-height: 300px;
+        padding: 10px 0;
+    }
+    
+    .navbar-nav li {
+        margin: 0;
+    }
+    
+    .navbar-nav a {
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .navbar-nav li:last-child a {
+        border-bottom: none;
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .code-line-number {
+        min-width: 24px;
+        padding: 0 4px;
+    }
+    
+    .code-line-content {
+        padding: 0 8px;
+    }
+} 

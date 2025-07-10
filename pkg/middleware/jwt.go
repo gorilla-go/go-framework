@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go-framework/pkg/config"
 	appErrors "go-framework/pkg/errors"
-	"go-framework/pkg/response"
 	"strings"
 	"time"
 
@@ -91,24 +90,21 @@ func JWTMiddleware() gin.HandlerFunc {
 		// 从请求头获取token
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.Unauthorized(c, "未提供认证信息", errors.New("缺少Authorization头"))
-			c.Abort()
+			HandleUnauthorized(c, "未提供认证信息", errors.New("缺少Authorization头"))
 			return
 		}
 
 		// 检查格式
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			response.Unauthorized(c, "认证格式错误", errors.New("无效的Authorization格式"))
-			c.Abort()
+			HandleUnauthorized(c, "认证格式错误", errors.New("无效的Authorization格式"))
 			return
 		}
 
 		// 解析令牌
 		claims, err := ParseToken(parts[1])
 		if err != nil {
-			response.Unauthorized(c, "无效的认证信息", err)
-			c.Abort()
+			HandleUnauthorized(c, "无效的认证信息", err)
 			return
 		}
 
@@ -128,8 +124,7 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 		// 获取用户角色
 		role, exists := c.Get("role")
 		if !exists {
-			response.Unauthorized(c, "未认证", errors.New("用户未认证"))
-			c.Abort()
+			HandleUnauthorized(c, "未认证", errors.New("用户未认证"))
 			return
 		}
 
@@ -144,13 +139,9 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 		}
 
 		if !hasRole {
+			// 使用通用错误处理
 			appErr := appErrors.NewForbidden("权限不足", errors.New("用户没有所需角色"))
-			resp := response.Response{
-				Code:    appErr.Code,
-				Message: appErr.Message,
-				Data:    nil,
-			}
-			c.AbortWithStatusJSON(appErr.HTTPStatus(), resp)
+			HandleAppError(c, appErr)
 			return
 		}
 

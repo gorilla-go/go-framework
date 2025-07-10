@@ -16,15 +16,20 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Template TemplateConfig `mapstructure:"template"`
 	Static   StaticConfig   `mapstructure:"static"`
+	Gzip     GzipConfig     `mapstructure:"gzip"`
+	Session  SessionConfig  `mapstructure:"session"`
 }
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	Port         int    `mapstructure:"port"`
-	Mode         string `mapstructure:"mode"`
-	ReadTimeout  int    `mapstructure:"read_timeout"`
-	WriteTimeout int    `mapstructure:"write_timeout"`
-	IdleTimeout  int    `mapstructure:"idle_timeout"`
+	Port            int    `mapstructure:"port"`
+	Mode            string `mapstructure:"mode"`
+	ReadTimeout     int    `mapstructure:"read_timeout"`
+	WriteTimeout    int    `mapstructure:"write_timeout"`
+	IdleTimeout     int    `mapstructure:"idle_timeout"`
+	EnableRateLimit bool   `mapstructure:"enable_rate_limit"`
+	RateLimit       int    `mapstructure:"rate_limit"` // 每秒请求数
+	RateBurst       int    `mapstructure:"rate_burst"` // 突发请求数
 }
 
 // LogConfig 日志配置
@@ -70,12 +75,42 @@ type JWTConfig struct {
 // TemplateConfig 模板配置
 type TemplateConfig struct {
 	Path      string `mapstructure:"path"`
+	Layouts   string `mapstructure:"layouts"`
 	Extension string `mapstructure:"extension"`
 }
 
 // StaticConfig 静态文件配置
 type StaticConfig struct {
+	Path    string `mapstructure:"path"`
+	SrcPath string `mapstructure:"src_path"`
+}
+
+// GzipConfig Gzip压缩配置
+type GzipConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+	Level   int  `mapstructure:"level"`
+}
+
+// SessionConfig 会话配置
+type SessionConfig struct {
+	// 存储类型: cookie, redis
+	Store string `mapstructure:"store"`
+	// 会话名称
+	Name string `mapstructure:"name"`
+	// 密钥
+	Secret string `mapstructure:"secret"`
+	// 过期时间（分钟）
+	MaxAge int `mapstructure:"max_age"`
+	// 是否只在HTTPS下发送Cookie
+	Secure bool `mapstructure:"secure"`
+	// 是否禁止JavaScript访问Cookie
+	HttpOnly bool `mapstructure:"http_only"`
+	// Cookie路径
 	Path string `mapstructure:"path"`
+	// Cookie域
+	Domain string `mapstructure:"domain"`
+	// SameSite策略
+	SameSite string `mapstructure:"same_site"`
 }
 
 var (

@@ -1,9 +1,7 @@
 package middleware
 
 import (
-	"go-framework/pkg/errors"
-	"go-framework/pkg/response"
-	"net/http"
+	stderrors "errors" // 重命名标准库errors
 	"sync"
 	"time"
 
@@ -70,17 +68,8 @@ func RateLimitMiddleware(rate int, capacity int) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		if !limiter.Allow() {
-			// 创建速率限制错误
-			appErr := errors.New(errors.TooManyRequests, "请求过于频繁，请稍后再试", nil)
-
-			// 返回统一错误响应
-			resp := response.Response{
-				Code:    appErr.Code,
-				Message: appErr.Message,
-				Data:    nil,
-			}
-
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, resp)
+			// 使用通用错误处理
+			HandleTooManyRequests(c, "请求过于频繁，请稍后再试", stderrors.New("请求限流"))
 			return
 		}
 
@@ -105,17 +94,8 @@ func IPRateLimitMiddleware(rate int, capacity int) gin.HandlerFunc {
 		mu.Unlock()
 
 		if !limiter.Allow() {
-			// 创建速率限制错误
-			appErr := errors.New(errors.TooManyRequests, "请求过于频繁，请稍后再试", nil)
-
-			// 返回统一错误响应
-			resp := response.Response{
-				Code:    appErr.Code,
-				Message: appErr.Message,
-				Data:    nil,
-			}
-
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, resp)
+			// 使用通用错误处理
+			HandleTooManyRequests(c, "请求过于频繁，请稍后再试", stderrors.New("IP请求限流"))
 			return
 		}
 

@@ -1,0 +1,38 @@
+# 忽略日志文件和目录
+logs/
+*.log
+
+# 忽略二进制文件
+bin/
+tmp/
+
+# 忽略编译生成的文件
+*.exe
+*.o
+*.out
+*.dll
+*.so
+*.dylib
+
+# 忽略依赖目录
+vendor/
+
+# 忽略IDE和编辑器生成的文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 忽略OS生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 忽略air生成的临时文件
+.air.conf
+air.log 

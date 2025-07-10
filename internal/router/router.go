@@ -1,95 +1,69 @@
 package router
 
 import (
-	"go-framework/internal/controller"
 	"go-framework/pkg/config"
+	"go-framework/pkg/logger"
 	"go-framework/pkg/middleware"
-	"go-framework/pkg/response"
-	"path/filepath"
-	"strconv"
+	"go-framework/pkg/template"
 
 	"github.com/gin-gonic/gin"
 )
 
-// SetupRouter 设置路由
-func SetupRouter() *gin.Engine {
+type Router struct {
+	Controllers []middleware.RouterAnnotation
+	Template    *template.TemplateManager
+}
+
+// Route 设置路由
+func (router *Router) Route() *gin.Engine {
+	// 使用全局配置
+	cfg := config.GetConfig()
+	if cfg == nil {
+		logger.Fatal("配置未初始化")
+	}
+
 	// 设置运行模式
-	gin.SetMode(config.GetConfig().Server.Mode)
+	gin.SetMode(cfg.Server.Mode)
 
 	// 创建路由
 	r := gin.New()
 
-	// 添加中间件
-	r.Use(gin.Logger())
-	r.Use(middleware.RecoveryMiddleware())
-	r.Use(middleware.LoggerMiddleware())
-	r.Use(middleware.CORSMiddleware())
-	r.Use(middleware.SecurityMiddleware())
-	r.Use(middleware.RateLimitMiddleware(100, 100)) // 每秒100个请求，容量100
+	// 添加全局中间件
+	r.Use(middleware.RecoveryMiddleware()) // 错误恢复，应该最先加载
+	r.Use(gin.Logger())                    // gin 请求日志
+	r.Use(middleware.LoggerMiddleware())   // 请求日志
+	r.Use(middleware.SecurityMiddleware()) // 安全相关头部
+	r.Use(middleware.SessionMiddleware())  // 会话管理
+
+	// 根据配置启用 CORS
+	if cfg.Server.Mode == "debug" {
+		r.Use(middleware.CORSMiddleware()) // 允许跨域，仅在开发环境启用
+	}
+
+	// 根据配置启用 gzip 压缩
+	if cfg.Gzip.Enabled {
+		r.Use(middleware.GzipWithLevelMiddleware(cfg.Gzip.Level))
+	}
+
+	// 根据配置启用全局限流
+	if cfg.Server.EnableRateLimit {
+		r.Use(middleware.RateLimitMiddleware(cfg.Server.RateLimit, cfg.Server.RateBurst))
+	}
 
 	// 静态文件
-	r.Static("/static", config.GetConfig().Static.Path)
+	r.Static("/static", cfg.Static.Path)
 
-	// 模板
-	templatePath := filepath.Join(config.GetConfig().Template.Path, "*"+config.GetConfig().Template.Extension)
-	r.LoadHTMLGlob(templatePath)
-
-	// 初始化控制器
-	homeController := controller.NewHomeController()
-	demoController := controller.NewDemoController()
-
-	// 创建路由构建器 - 支持Flask风格的路由参数
+	// 创建路由构建器
 	rb := middleware.NewRouteBuilder(r)
 
-	// Web路由 - 集中定义
-	rb.GET("/", homeController.Index)
-	rb.GET("/api", homeController.ApiHome)
-	rb.GET("/health", homeController.Health)
-
-	// API路由组 - 集中定义
-	apiGroup := rb.Group("/api/v1")
-
-	// 演示API
-	apiGroup.GET("/demo", demoController.Demo)
-
-	// 带正则验证的用户路由
-	apiGroup.GET("/user/<id:\\d+>", func(c *gin.Context) {
-		id := c.Param("id")
-		response.Success(c, gin.H{
-			"id":      id,
-			"name":    "用户: " + id,
-			"message": "获取用户详情成功",
-		})
-	})
-
-	// 带多参数验证的产品路由
-	apiGroup.GET("/product/<category:[a-zA-Z0-9-]+>/<id:\\d+>", func(c *gin.Context) {
-		category := c.Param("category")
-		id := middleware.ParseParam(c, "id", 0).(int)
-		response.Success(c, gin.H{
-			"category": category,
-			"id":       id,
-			"name":     category + "产品" + strconv.Itoa(id),
-			"message":  "获取产品详情成功",
-		})
-	})
+	// 注册控制器路由
+	for _, controller := range router.Controllers {
+		controller.Annotation(rb)
+	}
 
 	// 404处理
 	r.NoRoute(func(c *gin.Context) {
-		if c.Request.URL.Path[:4] == "/api" {
-			// API 404
-			c.JSON(404, gin.H{
-				"code":    404,
-				"message": "API路径不存在",
-				"data":    nil,
-			})
-		} else {
-			// Web 404
-			c.HTML(404, "index.html", gin.H{
-				"title":   "页面不存在 - Gin模板项目",
-				"message": "页面不存在",
-			})
-		}
+		middleware.HandleNotFound(c, "页面不存在", nil)
 	})
 
 	return r

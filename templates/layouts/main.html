@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}} - Go Framework{{else}}Go Framework{{end}}</title>
+    
+    <!-- 恢复原始CSS引用 -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/wiki.css">
+
+    <!-- 添加我们的优化CSS，但不删除原始引用以确保兼容性 -->
+    <style>
+    /* 关键颜色变量覆盖 - 提高对比度 */
+    :root {
+        /* 代码高亮颜色 - 已优化对比度 */
+        --code-keyword: #b01337 !important; /* 深红色，增强对比度 */
+        --code-function: #5a32a3 !important; /* 深紫色 */
+        --code-type: #116329 !important; /* 深绿色，增强对比度 */
+        --code-stdlib: #953800 !important; /* 深橙色，增强对比度 */
+        --code-line-number: #646b72 !important; /* 深灰色，提高对比度 */
+        --code-variable: #953800 !important; /* 深橙色 */
+        --code-option: #044289 !important; /* 深蓝色 */
+        --code-interface: #5a32a3 !important; /* 深紫色 */
+        
+        /* 语言标签颜色 */
+        --lang-go: #00668c; /* 深蓝色的Go，提高对比度 */
+        --lang-bash: #346c0e; /* 深绿色的Bash，提高对比度 */
+    }
+    
+    /* 代码块优化样式 */
+    .code-lang-label {
+        background-color: #e1e4e8 !important; /* 更深的背景色 */
+        color: #444 !important; /* 默认颜色更深 */
+        padding: 2px 8px !important; /* 增加填充以增加可点击区域 */
+        font-weight: 600 !important; /* 增加字体粗细 */
+    }
+    
+    .code-block.lang-go .code-lang-label {
+        color: var(--lang-go) !important;
+        font-weight: 700 !important;
+    }
+    
+    .code-block.lang-bash .code-lang-label {
+        color: var(--lang-bash) !important;
+        font-weight: 700 !important;
+    }
+    
+    /* 行号 */
+    .code-line-number {
+        color: var(--code-line-number) !important;
+        opacity: 0.8 !important; /* 增加不透明度 */
+        font-size: 11px !important; /* 略微增加字体大小 */
+        font-weight: 500 !important; /* 增加字体粗细 */
+    }
+    </style>
+    
+    <script src="/static/js/main.js" defer></script>
+</head>
+<body>
+    <div class="content-wrapper">
+        <nav class="navbar">
+            <div class="navbar-container">
+                <a href="/" class="navbar-brand">Go Framework</a>
+                
+                <div class="menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                
+                <ul class="navbar-nav">
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/docs">文档</a></li>
+                    <li><a href="/examples">示例</a></li>
+                    <li><a href="https://github.com/your-username/go-framework" target="_blank">Github</a></li>
+                </ul>
+            </div>
+        </nav>
+        
+        <main>
+            {{block "content" .}}{{end}}
+        </main>
+    </div>
+    
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-nav">
+                <a href="/">首页</a>
+                <a href="/docs">文档</a>
+                <a href="/examples">示例</a>
+                <a href="/about">关于</a>
+            </div>
+            <p class="footer-copy">&copy; 2023-{{ dateFormat now "Y" }} Go Framework. 保留所有权利。</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,33 +1,42 @@
 package main
 
 import (
-	"fmt"
-	"go-framework/internal/router"
-	"go-framework/pkg/config"
+	"context"
+	"go-framework/internal/app"
 	"go-framework/pkg/logger"
-	"log"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
-	// 加载配置
-	cfg, err := config.LoadConfig("")
-	if err != nil {
-		fmt.Printf("加载配置失败: %v\n", err)
-		os.Exit(1)
-	}
+	// 创建应用
+	application := app.NewApp()
 
-	// 初始化日志
-	if err := logger.InitLogger(&cfg.Log); err != nil {
-		fmt.Printf("初始化日志失败: %v\n", err)
-		os.Exit(1)
-	}
+	// 创建一个信号通道
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	// 创建路由
-	r := router.SetupRouter()
+	// 在单独的goroutine中等待信号
+	go func() {
+		// 等待信号
+		sig := <-sigCh
+		logger.Infof("接收到信号: %s, 正在关闭应用...", sig)
 
-	// 启动HTTP服务器
-	port := fmt.Sprintf(":%d", cfg.Server.Port)
-	logger.Infof("HTTP服务器启动在 %d 端口", cfg.Server.Port)
-	log.Fatal(r.Run(port))
+		// 停止应用
+		ctx, cancel := context.WithTimeout(context.Background(), app.ShutdownTimeout)
+		defer cancel()
+
+		// 这将触发所有OnStop钩子
+		if err := application.Stop(ctx); err != nil {
+			logger.Errorf("应用停止失败: %v", err)
+			os.Exit(1)
+		}
+
+		logger.Info("应用已完全关闭")
+	}()
+
+	// 在主线程中运行应用，这将阻塞直到应用停止
+	logger.Info("正在启动应用...")
+	application.Run()
 }

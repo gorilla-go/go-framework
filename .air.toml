@@ -14,15 +14,15 @@ bin = "tmp/main"
 # 自定义执行程序的命令，可以添加额外的编译标识例如添加 GIN_MODE=release
 full_bin = "./tmp/main"
 # 监听以下文件扩展名的文件.
-include_ext = ["go", "tpl", "tmpl", "html", "yaml", "yml", "json", "toml"]
+include_ext = ["go", "html", "yaml", "yml"]
 # 忽略这些文件扩展名或目录
-exclude_dir = ["tmp", ".git", "node_modules"]
+exclude_dir = ["tmp", ".git", "node_modules", "logs", "vendor", "static"]
 # 监听以下指定目录的文件
 include_dir = []
 # 排除以下文件
 exclude_file = []
 # 如果文件更改过于频繁，则没有必要在每次更改时都触发构建。可以设置触发构建的延迟时间
-delay = 1000 # ms
+delay = 2000 # ms
 # 发生构建错误时，停止运行旧的二进制文件。
 stop_on_error = true
 # air的日志文件名，该日志文件放置在你的`tmp_dir`中
@@ -41,4 +41,4 @@ runner = "green"
 
 [misc]
 # 退出时删除tmp目录
-clean_on_exit = true 
+clean_on_exit = false
