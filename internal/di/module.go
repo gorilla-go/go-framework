@@ -52,10 +52,9 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []middleware.RouterAnnotation, templateManager *template.TemplateManager) *router.Router {
+func ProvideRouter(controllers []middleware.RouterAnnotation) *router.Router {
 	return &router.Router{
 		Controllers: controllers,
-		Template:    templateManager,
 	}
 }
 
