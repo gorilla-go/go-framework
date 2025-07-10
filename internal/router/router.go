@@ -4,14 +4,12 @@ import (
 	"go-framework/pkg/config"
 	"go-framework/pkg/logger"
 	"go-framework/pkg/middleware"
-	"go-framework/pkg/template"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Router struct {
 	Controllers []middleware.RouterAnnotation
-	Template    *template.TemplateManager
 }
 
 // Route 设置路由
