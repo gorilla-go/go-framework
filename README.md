@@ -206,7 +206,6 @@ template:
 # 静态文件配置
 static:
   path: ./static/dist
-  src_path: ./static/src
 
 # Gzip压缩配置
 gzip:

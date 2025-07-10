@@ -81,8 +81,7 @@ type TemplateConfig struct {
 
 // StaticConfig 静态文件配置
 type StaticConfig struct {
-	Path    string `mapstructure:"path"`
-	SrcPath string `mapstructure:"src_path"`
+	Path string `mapstructure:"path"`
 }
 
 // GzipConfig Gzip压缩配置

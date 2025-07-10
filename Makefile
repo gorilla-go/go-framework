@@ -27,9 +27,9 @@ dev: gulp-build
 	$$AIR_PATH
 
 # 生产环境构建
-build:
+build: install-deps gulp-build
 	@mkdir -p bin
-	go build -o bin/app ./cmd/main.go
+	go build -ldflags="-s -w" -o bin/app ./cmd/main.go
 
 # 运行（不带热重载）
 run:
