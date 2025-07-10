@@ -105,7 +105,7 @@ Wiki页面提供了以下内容：
 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/go-framework.git
+git clone https://github.com/gorilla-go/go-framework.git
 cd go-framework
 ```
 
