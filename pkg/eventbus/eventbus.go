@@ -1,147 +1,155 @@
 package eventbus
 
 import (
-	"errors"
+	"reflect"
 	"sync"
 )
 
-var (
-	// ErrHandlerAlreadyRegistered 表示处理器已经注册
-	ErrHandlerAlreadyRegistered = errors.New("handler already registered")
+// EventHandler 事件处理函数类型
+type EventHandler func(args ...interface{})
 
-	// ErrHandlerNotFound 表示处理器未找到
-	ErrHandlerNotFound = errors.New("handler not found")
-
-	// 默认事件总线实例
-	defaultBus *EventBus
-	once       sync.Once
-)
-
-// EventBus 是事件总线的实现
+// EventBus 事件总线结构体
 type EventBus struct {
-	handlers     map[string][]Handler // 按事件类型映射处理器
-	handlersLock sync.RWMutex
-	asyncEnabled bool
+	mu        sync.RWMutex
+	listeners map[string][]EventHandler
+	onceMap   map[string]map[int]bool // 记录once监听器的索引
 }
 
-// New 创建一个新的事件总线
+// New 创建新的事件总线实例
 func New() *EventBus {
 	return &EventBus{
-		handlers: make(map[string][]Handler),
+		listeners: make(map[string][]EventHandler),
+		onceMap:   make(map[string]map[int]bool),
 	}
 }
 
-// Default 返回默认的事件总线实例（单例模式）
-func Default() *EventBus {
-	once.Do(func() {
-		defaultBus = New()
-	})
-	return defaultBus
+// On 注册事件监听器
+func (eb *EventBus) On(event string, handler EventHandler) {
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
+
+	eb.listeners[event] = append(eb.listeners[event], handler)
 }
 
-// EnableAsync 启用异步事件处理
-func (b *EventBus) EnableAsync() {
-	b.asyncEnabled = true
-}
+// Once 注册一次性事件监听器
+func (eb *EventBus) Once(event string, handler EventHandler) {
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
 
-// DisableAsync 禁用异步事件处理
-func (b *EventBus) DisableAsync() {
-	b.asyncEnabled = false
-}
-
-// Register 注册一个事件处理器
-func (b *EventBus) Register(h Handler) error {
-	b.handlersLock.Lock()
-	defer b.handlersLock.Unlock()
-
-	// 获取处理器关心的事件类型
-	eventTypes := h.InterestedIn()
-
-	for _, eventType := range eventTypes {
-		// 检查处理器是否已注册
-		for _, existingHandler := range b.handlers[eventType] {
-			if existingHandler == h {
-				return ErrHandlerAlreadyRegistered
-			}
-		}
-
-		// 添加处理器到对应的事件类型
-		b.handlers[eventType] = append(b.handlers[eventType], h)
+	if eb.onceMap[event] == nil {
+		eb.onceMap[event] = make(map[int]bool)
 	}
 
-	return nil
+	index := len(eb.listeners[event])
+	eb.listeners[event] = append(eb.listeners[event], handler)
+	eb.onceMap[event][index] = true
 }
 
-// RegisterFunc 注册一个函数作为指定事件类型的处理器
-func (b *EventBus) RegisterFunc(eventType string, handlerFunc func(*Event) error) {
-	handler := NewSingleTypeHandler(eventType, handlerFunc)
-	_ = b.Register(handler)
-}
+// Emit 触发事件
+func (eb *EventBus) Emit(event string, args ...interface{}) {
+	eb.mu.RLock()
+	handlers := make([]EventHandler, len(eb.listeners[event]))
+	copy(handlers, eb.listeners[event])
+	onceIndexes := make([]int, 0)
 
-// Unregister 注销一个事件处理器
-func (b *EventBus) Unregister(h Handler) error {
-	b.handlersLock.Lock()
-	defer b.handlersLock.Unlock()
-
-	eventTypes := h.InterestedIn()
-	found := false
-
-	for _, eventType := range eventTypes {
-		handlers := b.handlers[eventType]
-		for i, existingHandler := range handlers {
-			if existingHandler == h {
-				// 从处理器列表中移除
-				b.handlers[eventType] = append(handlers[:i], handlers[i+1:]...)
-				found = true
-				break
-			}
+	// 收集需要删除的once监听器索引
+	if eb.onceMap[event] != nil {
+		for index := range eb.onceMap[event] {
+			onceIndexes = append(onceIndexes, index)
 		}
 	}
+	eb.mu.RUnlock()
 
-	if !found {
-		return ErrHandlerNotFound
-	}
-
-	return nil
-}
-
-// Publish 发布一个事件
-func (b *EventBus) Publish(event *Event) {
-	b.handlersLock.RLock()
-	handlers := b.handlers[event.Type]
-	b.handlersLock.RUnlock()
-
+	// 执行所有处理函数
 	for _, handler := range handlers {
-		if b.asyncEnabled {
-			// 异步处理
-			go func(h Handler, e *Event) {
-				_ = h.Handle(e)
-			}(handler, event)
-		} else {
-			// 同步处理
-			_ = handler.Handle(event)
-		}
+		handler(args...)
+	}
+
+	// 删除once监听器
+	if len(onceIndexes) > 0 {
+		eb.removeOnceListeners(event, onceIndexes)
 	}
 }
 
-// PublishType 以指定类型和数据发布事件
-func (b *EventBus) PublishType(eventType string, data interface{}) {
-	event := NewEvent(eventType, data)
-	b.Publish(event)
+// Off 移除事件监听器
+func (eb *EventBus) Off(event string, handler ...EventHandler) {
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
+
+	if len(handler) == 0 {
+		// 如果没有指定处理函数，移除所有监听器
+		delete(eb.listeners, event)
+		delete(eb.onceMap, event)
+		return
+	}
+
+	// 移除指定的处理函数
+	handlers := eb.listeners[event]
+	for _, h := range handler {
+		for i := len(handlers) - 1; i >= 0; i-- {
+			if reflect.ValueOf(handlers[i]).Pointer() == reflect.ValueOf(h).Pointer() {
+				// 删除监听器
+				handlers = append(handlers[:i], handlers[i+1:]...)
+				// 删除对应的once记录
+				if eb.onceMap[event] != nil {
+					delete(eb.onceMap[event], i)
+				}
+			}
+		}
+	}
+	eb.listeners[event] = handlers
 }
 
-// HasHandlersFor 检查是否有处理器注册了指定事件类型
-func (b *EventBus) HasHandlersFor(eventType string) bool {
-	b.handlersLock.RLock()
-	defer b.handlersLock.RUnlock()
+// removeOnceListeners 移除once监听器
+func (eb *EventBus) removeOnceListeners(event string, indexes []int) {
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
 
-	return len(b.handlers[eventType]) > 0
+	// 从大到小排序索引，避免删除时索引错位
+	for i := 0; i < len(indexes); i++ {
+		for j := i + 1; j < len(indexes); j++ {
+			if indexes[i] < indexes[j] {
+				indexes[i], indexes[j] = indexes[j], indexes[i]
+			}
+		}
+	}
+
+	handlers := eb.listeners[event]
+	for _, index := range indexes {
+		if index < len(handlers) {
+			handlers = append(handlers[:index], handlers[index+1:]...)
+		}
+	}
+	eb.listeners[event] = handlers
+
+	// 清理once映射
+	delete(eb.onceMap, event)
 }
 
-// Reset 重置事件总线，清除所有处理器
-func (b *EventBus) Reset() {
-	b.handlersLock.Lock()
-	defer b.handlersLock.Unlock()
+// ListenerCount 获取指定事件的监听器数量
+func (eb *EventBus) ListenerCount(event string) int {
+	eb.mu.RLock()
+	defer eb.mu.RUnlock()
+	return len(eb.listeners[event])
+}
 
-	b.handlers = make(map[string][]Handler)
+// Events 获取所有已注册的事件名称
+func (eb *EventBus) Events() []string {
+	eb.mu.RLock()
+	defer eb.mu.RUnlock()
+
+	events := make([]string, 0, len(eb.listeners))
+	for event := range eb.listeners {
+		events = append(events, event)
+	}
+	return events
+}
+
+// Clear 清除所有事件监听器
+func (eb *EventBus) Clear() {
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
+
+	eb.listeners = make(map[string][]EventHandler)
+	eb.onceMap = make(map[string]map[int]bool)
 }

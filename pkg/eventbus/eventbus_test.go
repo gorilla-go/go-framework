@@ -3,172 +3,270 @@ package eventbus
 import (
 	"sync"
 	"testing"
-	"time"
 )
 
-func TestEventBus(t *testing.T) {
-	// 创建一个新的事件总线
-	bus := New()
+func TestEventBus_On(t *testing.T) {
+	eb := New()
+	called := false
 
-	// 测试事件类型
-	const testEventType = "test.event"
-
-	// 测试事件数据
-	testEventData := map[string]interface{}{
-		"message": "测试消息",
-		"code":    200,
-	}
-
-	// 测试变量用于验证处理器被调用
-	handlerCalled := false
-	handlerWg := sync.WaitGroup{}
-	handlerWg.Add(1)
-
-	// 注册处理器
-	bus.RegisterFunc(testEventType, func(e *Event) error {
-		defer handlerWg.Done()
-		handlerCalled = true
-
-		// 验证事件类型
-		if e.Type != testEventType {
-			t.Errorf("预期事件类型 %s，实际得到 %s", testEventType, e.Type)
-		}
-
-		// 验证事件数据
-		data, ok := e.Data.(map[string]interface{})
-		if !ok {
-			t.Errorf("事件数据类型错误")
-			return nil
-		}
-
-		if data["message"] != testEventData["message"] || data["code"] != testEventData["code"] {
-			t.Errorf("事件数据不匹配")
-		}
-
-		return nil
+	eb.On("test", func(args ...interface{}) {
+		called = true
 	})
 
-	// 发布事件
-	bus.PublishType(testEventType, testEventData)
+	eb.Emit("test")
 
-	// 等待处理器执行完成
-	handlerWg.Wait()
-
-	// 验证处理器被调用
-	if !handlerCalled {
-		t.Error("处理器未被调用")
+	if !called {
+		t.Error("Event handler was not called")
 	}
 }
 
-func TestAsyncEventHandling(t *testing.T) {
-	bus := New()
-	bus.EnableAsync()
+func TestEventBus_Once(t *testing.T) {
+	eb := New()
+	callCount := 0
 
-	const testEventType = "test.async"
-	handlerCalled := false
-	handlerWg := sync.WaitGroup{}
-	handlerWg.Add(1)
-
-	// 注册处理器
-	bus.RegisterFunc(testEventType, func(e *Event) error {
-		// 模拟处理延迟
-		time.Sleep(100 * time.Millisecond)
-		handlerCalled = true
-		handlerWg.Done()
-		return nil
+	eb.Once("test", func(args ...interface{}) {
+		callCount++
 	})
 
-	// 记录开始时间
-	startTime := time.Now()
+	// 触发两次事件
+	eb.Emit("test")
+	eb.Emit("test")
 
-	// 发布事件
-	bus.PublishType(testEventType, "异步测试")
-
-	// 验证发布立即返回（异步处理）
-	elapsed := time.Since(startTime)
-	if elapsed >= 100*time.Millisecond {
-		t.Errorf("异步处理应该立即返回，但耗时 %v", elapsed)
-	}
-
-	// 等待处理器执行完成
-	handlerWg.Wait()
-
-	// 验证处理器被调用
-	if !handlerCalled {
-		t.Error("处理器未被调用")
+	if callCount != 1 {
+		t.Errorf("Expected call count to be 1, got %d", callCount)
 	}
 }
 
-func TestMultipleHandlers(t *testing.T) {
-	bus := New()
+func TestEventBus_Emit(t *testing.T) {
+	eb := New()
+	var receivedArgs []interface{}
 
-	const testEventType = "test.multiple"
+	eb.On("test", func(args ...interface{}) {
+		receivedArgs = args
+	})
 
-	// 跟踪处理器调用
-	handlersCalledCount := 0
-	handlerWg := sync.WaitGroup{}
-	handlerWg.Add(3) // 期望3个处理器
+	expectedArgs := []interface{}{"hello", 123, true}
+	eb.Emit("test", expectedArgs...)
 
-	// 注册多个处理器
-	for i := 0; i < 3; i++ {
-		bus.RegisterFunc(testEventType, func(e *Event) error {
-			handlersCalledCount++
-			handlerWg.Done()
-			return nil
+	if len(receivedArgs) != len(expectedArgs) {
+		t.Errorf("Expected %d args, got %d", len(expectedArgs), len(receivedArgs))
+	}
+
+	for i, arg := range expectedArgs {
+		if receivedArgs[i] != arg {
+			t.Errorf("Expected arg %d to be %v, got %v", i, arg, receivedArgs[i])
+		}
+	}
+}
+
+func TestEventBus_Off(t *testing.T) {
+	eb := New()
+	called := false
+
+	handler := func(args ...interface{}) {
+		called = true
+	}
+
+	eb.On("test", handler)
+	eb.Off("test", handler)
+	eb.Emit("test")
+
+	if called {
+		t.Error("Event handler should not have been called after removal")
+	}
+}
+
+func TestEventBus_OffAll(t *testing.T) {
+	eb := New()
+	callCount := 0
+
+	eb.On("test", func(args ...interface{}) {
+		callCount++
+	})
+	eb.On("test", func(args ...interface{}) {
+		callCount++
+	})
+
+	// 移除所有监听器
+	eb.Off("test")
+	eb.Emit("test")
+
+	if callCount != 0 {
+		t.Errorf("Expected call count to be 0, got %d", callCount)
+	}
+}
+
+func TestEventBus_ListenerCount(t *testing.T) {
+	eb := New()
+
+	if eb.ListenerCount("test") != 0 {
+		t.Error("Expected listener count to be 0 for non-existent event")
+	}
+
+	eb.On("test", func(args ...interface{}) {})
+	eb.On("test", func(args ...interface{}) {})
+
+	if eb.ListenerCount("test") != 2 {
+		t.Errorf("Expected listener count to be 2, got %d", eb.ListenerCount("test"))
+	}
+}
+
+func TestEventBus_Events(t *testing.T) {
+	eb := New()
+
+	eb.On("event1", func(args ...interface{}) {})
+	eb.On("event2", func(args ...interface{}) {})
+
+	events := eb.Events()
+	if len(events) != 2 {
+		t.Errorf("Expected 2 events, got %d", len(events))
+	}
+
+	// 检查事件名称是否存在
+	eventMap := make(map[string]bool)
+	for _, event := range events {
+		eventMap[event] = true
+	}
+
+	if !eventMap["event1"] || !eventMap["event2"] {
+		t.Error("Expected events 'event1' and 'event2' to be present")
+	}
+}
+
+func TestEventBus_Clear(t *testing.T) {
+	eb := New()
+
+	eb.On("event1", func(args ...interface{}) {})
+	eb.On("event2", func(args ...interface{}) {})
+
+	eb.Clear()
+
+	if len(eb.Events()) != 0 {
+		t.Error("Expected no events after clear")
+	}
+}
+
+func TestEventBus_Concurrent(t *testing.T) {
+	eb := New()
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	callCount := 0
+
+	// 注册多个监听器
+	for i := 0; i < 10; i++ {
+		eb.On("test", func(args ...interface{}) {
+			mu.Lock()
+			callCount++
+			mu.Unlock()
 		})
 	}
 
-	// 发布事件
-	bus.PublishType(testEventType, "测试多处理器")
+	// 并发触发事件
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			eb.Emit("test")
+		}()
+	}
 
-	// 等待所有处理器执行完成
-	handlerWg.Wait()
+	wg.Wait()
 
-	// 验证所有处理器都被调用
-	if handlersCalledCount != 3 {
-		t.Errorf("期望调用3个处理器，实际调用了 %d 个", handlersCalledCount)
+	mu.Lock()
+	expected := 10 * 100 // 10个监听器 * 100次触发
+	if callCount != expected {
+		t.Errorf("Expected call count to be %d, got %d", expected, callCount)
+	}
+	mu.Unlock()
+}
+
+func TestEventBus_MultipleOnce(t *testing.T) {
+	eb := New()
+	callCount := 0
+
+	// 注册多个once监听器
+	for i := 0; i < 5; i++ {
+		eb.Once("test", func(args ...interface{}) {
+			callCount++
+		})
+	}
+
+	// 触发一次事件
+	eb.Emit("test")
+
+	if callCount != 5 {
+		t.Errorf("Expected call count to be 5, got %d", callCount)
+	}
+
+	// 再次触发，应该没有监听器被调用
+	eb.Emit("test")
+
+	if callCount != 5 {
+		t.Errorf("Expected call count to remain 5, got %d", callCount)
 	}
 }
 
-func TestUnregister(t *testing.T) {
-	bus := New()
+// 测试全局函数
+func TestGlobalFunctions(t *testing.T) {
+	// 清理全局状态
+	Clear()
 
-	const testEventType = "test.unregister"
-
-	// 创建一个可以被注销的处理器
-	handler := NewSingleTypeHandler(testEventType, func(e *Event) error {
-		t.Error("这个处理器应该已被注销，不应被调用")
-		return nil
+	called := false
+	On("global_test", func(args ...interface{}) {
+		called = true
 	})
 
-	// 注册处理器
-	err := bus.Register(handler)
-	if err != nil {
-		t.Fatalf("注册处理器失败：%v", err)
+	Emit("global_test")
+
+	if !called {
+		t.Error("Global event handler was not called")
 	}
 
-	// 验证处理器被正确注册
-	if !bus.HasHandlersFor(testEventType) {
-		t.Fatal("处理器注册失败")
+	if ListenerCount("global_test") != 1 {
+		t.Errorf("Expected global listener count to be 1, got %d", ListenerCount("global_test"))
 	}
 
-	// 注销处理器
-	err = bus.Unregister(handler)
-	if err != nil {
-		t.Fatalf("注销处理器失败：%v", err)
+	Off("global_test")
+
+	if ListenerCount("global_test") != 0 {
+		t.Errorf("Expected global listener count to be 0 after removal, got %d", ListenerCount("global_test"))
 	}
+}
 
-	// 验证处理器已被注销
-	if bus.HasHandlersFor(testEventType) {
-		t.Fatal("处理器注销失败")
+func TestGlobalOnce(t *testing.T) {
+	Clear()
+
+	callCount := 0
+	Once("global_once_test", func(args ...interface{}) {
+		callCount++
+	})
+
+	Emit("global_once_test")
+	Emit("global_once_test")
+
+	if callCount != 1 {
+		t.Errorf("Expected global once call count to be 1, got %d", callCount)
 	}
+}
 
-	// 发布事件，此时不应有处理器被调用
-	bus.PublishType(testEventType, "测试注销")
+// 基准测试
+func BenchmarkEventBus_Emit(b *testing.B) {
+	eb := New()
+	eb.On("benchmark", func(args ...interface{}) {
+		// 空处理函数
+	})
 
-	// 尝试注销一个不存在的处理器
-	err = bus.Unregister(handler)
-	if err != ErrHandlerNotFound {
-		t.Errorf("期望错误 %v，实际得到 %v", ErrHandlerNotFound, err)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		eb.Emit("benchmark", "test", 123)
+	}
+}
+
+func BenchmarkEventBus_On(b *testing.B) {
+	eb := New()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		eb.On("benchmark", func(args ...interface{}) {})
 	}
 }
