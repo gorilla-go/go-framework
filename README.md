@@ -1,6 +1,6 @@
 # Go Web Framework
 
-一个基于Gin和Uber FX的高性能、模块化Go Web框架，支持依赖注入、中间件、模板渲染、会话管理和静态资源处理等功能。
+一个基于Gin和Uber FX的高性能、模块化Go Web框架，支持依赖注入、中间件、模板渲染、会话管理、事件总线和静态资源处理等功能。
 
 ## Wiki页面
 
@@ -27,6 +27,7 @@ Wiki页面提供了以下内容：
 - [中间件](#中间件)
 - [模板渲染](#模板渲染)
 - [会话管理](#会话管理)
+- [事件总线](#事件总线)
 - [数据库访问](#数据库访问)
 - [日志系统](#日志系统)
 - [错误处理](#错误处理)
@@ -45,6 +46,7 @@ Wiki页面提供了以下内容：
 - **模块化设计**：清晰的目录结构和模块划分，易于维护和扩展
 - **中间件系统**：提供丰富的内置中间件，包括日志、CORS、GZIP压缩、JWT、限流、会话等
 - **模板引擎**：支持Go模板引擎，并提供丰富的模板函数
+- **事件总线**：内置JavaScript风格的事件管理器，支持事件的注册、触发和解除注册
 - **静态资源处理**：集成Gulp工作流，支持CSS、JavaScript的压缩和打包
 - **会话管理**：支持Cookie和Redis两种会话存储方式
 - **统一响应**：标准化的API响应格式和错误处理
@@ -322,7 +324,7 @@ session:
 
 框架提供了结构化的日志系统，主要特性：
 
-- **日志级别**：支持Debug、Info、Warn、Error、Fatal、Panic等多个级别
+- **日志级别**：支持Debug、Info、Warn、Error、Fatal、Panic多个级别
 - **日志格式**：支持JSON和文本两种格式
 - **文件日志**：支持输出日志到文件，支持日志滚动
 - **日志字段**：支持结构化日志字段，便于日志分析
@@ -423,4 +425,4 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE. 
+SOFTWARE.

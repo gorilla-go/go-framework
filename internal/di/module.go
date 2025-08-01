@@ -5,6 +5,7 @@ import (
 	"go-framework/internal/router"
 	"go-framework/pkg/config"
 	"go-framework/pkg/database"
+	"go-framework/pkg/eventbus"
 	"go-framework/pkg/logger"
 	"go-framework/pkg/middleware"
 	"go-framework/pkg/template"
@@ -68,6 +69,11 @@ func ProvideControllers() []middleware.RouterAnnotation {
 	return controllers
 }
 
+// 提供事件注册器
+func ProvideEventBus() *eventbus.EventBus {
+	return eventbus.New()
+}
+
 // 转换控制器数组为任意类型数组，用于依赖注入
 func ConvertControllerArrToAny(controllers []middleware.RouterAnnotation) []any {
 	anyControllers := make([]any, len(controllers))
@@ -81,6 +87,7 @@ func ConvertControllerArrToAny(controllers []middleware.RouterAnnotation) []any 
 var Module = fx.Options(
 	fx.Provide(
 		ProvideConfig,
+		ProvideEventBus,
 		ProvideDatabase,
 		ProvideTemplateManager,
 		ProvideControllers,

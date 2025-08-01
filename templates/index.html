@@ -2,7 +2,7 @@
 <div class="wiki-container">
     <div class="wiki-header">
         <h1>{{ .Title }}</h1>
-        <p>基于Gin和Uber FX构建的高性能、模块化Go Web框架</p>
+        <p>基于Gin和Uber FX构建的高性能、模块化Go Web框架，支持事件驱动编程</p>
     </div>
 
     <div class="section">
@@ -15,6 +15,30 @@
                 <div class="code-block" data-lang="go">{{ safeHTML .Example }}</div>
             </div>
             {{ end }}
+            
+            <!-- 添加事件总线功能卡片 -->
+            <div class="feature-card">
+                <h3>事件总线</h3>
+                <p>JavaScript风格的事件管理器，支持事件的注册、触发和解除注册，提供松耦合的事件驱动编程支持</p>
+                <div class="code-block" data-lang="go">// 注册事件监听器
+eventbus.On("user.login", func(args ...interface{}) {
+    username := args[0].(string)
+    fmt.Printf("用户登录: %s\n", username)
+})
+
+// 注册一次性监听器
+eventbus.Once("app.start", func(args ...interface{}) {
+    fmt.Println("应用启动完成")
+})
+
+// 触发事件
+eventbus.Emit("user.login", "张三")
+eventbus.Emit("app.start")
+
+// 移除监听器
+eventbus.Off("user.login")
+                </div>
+            </div>
         </div>
     </div>
 
@@ -31,6 +55,48 @@
             </div>
         </div>
         {{ end }}
+        
+        <!-- 添加事件总线使用示例 -->
+        <div class="example-card">
+            <div class="example-header">
+                <h3>事件驱动编程</h3>
+            </div>
+            <div class="example-body">
+                <p>使用事件总线实现松耦合的模块间通信，支持异步事件处理和事件链</p>
+                <div class="code-block" data-lang="go">
+// 在控制器中触发事件
+func (c *UserController) Login(ctx *gin.Context) {
+    // 登录逻辑...
+    eventbus.Emit("user.login", user.ID, user.Username, ctx.ClientIP())
+    response.Success(ctx, "登录成功", user)
+}
+
+// 在服务中监听事件
+func init() {
+    // 记录登录日志
+    eventbus.On("user.login", func(args ...interface{}) {
+        userID, username, ip := args[0], args[1], args[2]
+        logger.Info("用户登录", "user_id", userID, "username", username, "ip", ip)
+    })
+    
+    // 更新最后登录时间
+    eventbus.On("user.login", func(args ...interface{}) {
+        userID := args[0]
+        userService.UpdateLastLoginTime(userID)
+    })
+    
+    // 异步处理任务
+    eventbus.On("task.process", func(args ...interface{}) {
+        go func() {
+            taskID := args[0]
+            // 处理任务...
+            eventbus.Emit("task.completed", taskID)
+        }()
+    })
+}
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="section">
@@ -44,6 +110,9 @@ cd go-framework
 
 # 安装依赖
 go mod tidy
+
+# 运行测试（包括事件总线测试）
+go test ./...
 
 # 开发模式运行
 make dev
