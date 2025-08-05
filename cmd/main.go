@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"go-framework/internal/app"
+	"go-framework/bootstrap"
 	"go-framework/pkg/logger"
+	_ "go-framework/routes"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,7 +12,7 @@ import (
 
 func main() {
 	// 创建应用
-	application := app.NewApp()
+	application := bootstrap.NewApp()
 
 	// 创建一个信号通道
 	sigCh := make(chan os.Signal, 1)
@@ -24,7 +25,7 @@ func main() {
 		logger.Infof("接收到信号: %s, 正在关闭应用...", sig)
 
 		// 停止应用
-		ctx, cancel := context.WithTimeout(context.Background(), app.ShutdownTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), bootstrap.ShutdownTimeout)
 		defer cancel()
 
 		// 这将触发所有OnStop钩子

@@ -1,11 +1,11 @@
-package app
+package bootstrap
 
 import (
 	"context"
 	"fmt"
-	"go-framework/internal/di"
 	"go-framework/pkg/config"
 	"go-framework/pkg/logger"
+	"go-framework/pkg/router"
 	"net/http"
 	"os"
 	"sync"
@@ -89,7 +89,16 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 func NewApp() *fx.App {
 	app := fx.New(
 		// 注册所有模块
-		di.Module,
+		fx.Provide(
+			ProvideConfig,
+			ProvideEventBus,
+			ProvideDatabase,
+			ProvideTemplateManager,
+			ProvideControllers,
+			ProvideRouter,
+			ProvideServer,
+		),
+		fx.Populate(router.ConvertController()...),
 
 		// 添加选项，禁用默认的信号处理，我们将自己处理
 		fx.NopLogger,
