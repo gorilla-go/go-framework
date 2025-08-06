@@ -1,8 +1,7 @@
-package middleware
+package router
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -182,45 +181,8 @@ func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
 	}
 }
 
-// ParseParam 将参数解析为指定类型
-func ParseParam(c *gin.Context, name string, defaultVal interface{}) interface{} {
-	val := c.Param(name)
-	if val == "" {
-		return defaultVal
-	}
-
-	switch defaultVal.(type) {
-	case int:
-		intVal, err := strconv.Atoi(val)
-		if err != nil {
-			return defaultVal
-		}
-		return intVal
-	case int64:
-		int64Val, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return defaultVal
-		}
-		return int64Val
-	case float64:
-		floatVal, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return defaultVal
-		}
-		return floatVal
-	case bool:
-		boolVal, err := strconv.ParseBool(val)
-		if err != nil {
-			return defaultVal
-		}
-		return boolVal
-	default:
-		return val
-	}
-}
-
 // BuildUrl 根据路由名称和参数生成URL
-func BuildUrl(name string, params ...map[string]interface{}) (string, error) {
+func BuildUrl(name string, params ...map[string]any) (string, error) {
 	routesMutex.RLock()
 	route, exists := routes[name]
 	routesMutex.RUnlock()

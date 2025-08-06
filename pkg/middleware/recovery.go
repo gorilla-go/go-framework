@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"fmt"
-	"go-framework/pkg/errors"
-	"go-framework/pkg/logger"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
 // RecoveryMiddleware 恢复中间件

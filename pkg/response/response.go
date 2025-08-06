@@ -1,11 +1,11 @@
 package response
 
 import (
-	"go-framework/pkg/errors"
-	"go-framework/pkg/logger"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
 // Response 统一响应结构

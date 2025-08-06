@@ -1,15 +1,14 @@
 package bootstrap
 
 import (
-	"go-framework/pkg/config"
-	"go-framework/pkg/database"
-	"go-framework/pkg/eventbus"
-	"go-framework/pkg/logger"
-	"go-framework/pkg/middleware"
-	pkgRouter "go-framework/pkg/router"
-	"go-framework/pkg/template"
-
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/database"
+	"github.com/gorilla-go/go-framework/pkg/eventbus"
+	"github.com/gorilla-go/go-framework/pkg/logger"
+	"github.com/gorilla-go/go-framework/pkg/router"
+	pkgRouter "github.com/gorilla-go/go-framework/pkg/router"
+	"github.com/gorilla-go/go-framework/pkg/template"
 	"gorm.io/gorm"
 )
 
@@ -43,7 +42,7 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []middleware.RouterAnnotation, cfg *config.Config) *pkgRouter.Router {
+func ProvideRouter(controllers []router.RouterAnnotation, cfg *config.Config) *pkgRouter.Router {
 	return &pkgRouter.Router{
 		Controllers: controllers,
 		Cfg:         cfg,
@@ -56,7 +55,7 @@ func ProvideServer(router *pkgRouter.Router) *gin.Engine {
 }
 
 // 提供控制器列表
-func ProvideControllers() []middleware.RouterAnnotation {
+func ProvideControllers() []router.RouterAnnotation {
 	return pkgRouter.Controllers
 }
 

@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"go-framework/app/controller"
-	"go-framework/pkg/router"
+	"github.com/gorilla-go/go-framework/app/controller"
+	"github.com/gorilla-go/go-framework/pkg/router"
 )
 
 func init() {

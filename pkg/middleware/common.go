@@ -1,26 +1,14 @@
 package middleware
 
 import (
-	"go-framework/pkg/errors"
-	"go-framework/pkg/response"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
-)
-
-// 常用HTTP状态码
-const (
-	StatusBadRequest          = http.StatusBadRequest          // 400
-	StatusUnauthorized        = http.StatusUnauthorized        // 401
-	StatusForbidden           = http.StatusForbidden           // 403
-	StatusNotFound            = http.StatusNotFound            // 404
-	StatusTooManyRequests     = http.StatusTooManyRequests     // 429
-	StatusInternalServerError = http.StatusInternalServerError // 500
+	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 // HandleError 处理错误并发送统一的错误响应
 // 这个函数可以替代中间件中的重复错误处理代码
-func HandleError(c *gin.Context, status int, code int, message string, err error) {
+func HandleError(c *gin.Context, code int, message string, err error) {
 	// 创建应用错误
 	appErr := errors.New(code, message, err)
 
@@ -32,7 +20,7 @@ func HandleError(c *gin.Context, status int, code int, message string, err error
 	}
 
 	// 发送响应并终止请求处理
-	c.AbortWithStatusJSON(status, resp)
+	c.AbortWithStatusJSON(code, resp)
 }
 
 // HandleAppError 处理应用错误并发送统一的错误响应
@@ -50,30 +38,30 @@ func HandleAppError(c *gin.Context, appErr *errors.AppError) {
 
 // HandleBadRequest 处理400错误
 func HandleBadRequest(c *gin.Context, message string, err error) {
-	HandleError(c, StatusBadRequest, errors.BadRequest, message, err)
+	HandleError(c, errors.BadRequest, message, err)
 }
 
 // HandleUnauthorized 处理401错误
 func HandleUnauthorized(c *gin.Context, message string, err error) {
-	HandleError(c, StatusUnauthorized, errors.Unauthorized, message, err)
+	HandleError(c, errors.Unauthorized, message, err)
 }
 
 // HandleForbidden 处理403错误
 func HandleForbidden(c *gin.Context, message string, err error) {
-	HandleError(c, StatusForbidden, errors.Forbidden, message, err)
+	HandleError(c, errors.Forbidden, message, err)
 }
 
 // HandleNotFound 处理404错误
 func HandleNotFound(c *gin.Context, message string, err error) {
-	HandleError(c, StatusNotFound, errors.NotFound, message, err)
+	HandleError(c, errors.NotFound, message, err)
 }
 
 // HandleTooManyRequests 处理429错误
 func HandleTooManyRequests(c *gin.Context, message string, err error) {
-	HandleError(c, StatusTooManyRequests, errors.TooManyRequests, message, err)
+	HandleError(c, errors.TooManyRequests, message, err)
 }
 
 // HandleInternalServerError 处理500错误
 func HandleInternalServerError(c *gin.Context, message string, err error) {
-	HandleError(c, StatusInternalServerError, errors.InternalServerError, message, err)
+	HandleError(c, errors.InternalServerError, message, err)
 }

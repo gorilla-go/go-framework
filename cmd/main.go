@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"go-framework/bootstrap"
-	"go-framework/pkg/logger"
-	_ "go-framework/routes"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/gorilla-go/go-framework/bootstrap"
+	"github.com/gorilla-go/go-framework/pkg/logger"
+	_ "github.com/gorilla-go/go-framework/routes"
 )
 
 func main() {

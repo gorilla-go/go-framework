@@ -3,7 +3,7 @@ package template
 
 import (
 	"fmt"
-	"go-framework/pkg/middleware"
+	"github.com/gorilla-go/go-framework/pkg/router"
 	"html/template"
 	"math"
 	"reflect"
@@ -743,7 +743,7 @@ func compare(a, b any) int {
 // <a href="{{ url "user@show" }}">用户页面</a>
 // <a href="{{ url "user@detail" (map "id" 123) }}">用户详情</a>
 func Route(name string, params ...map[string]any) template.URL {
-	url, err := middleware.BuildUrl(name, params...)
+	url, err := router.BuildUrl(name, params...)
 	if err != nil {
 		panic(err) // 如果路由不存在，则触发 panic
 	}

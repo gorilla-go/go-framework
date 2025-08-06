@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"bytes"
-	"go-framework/pkg/logger"
 	"io"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
 // LoggerMiddleware 日志中间件

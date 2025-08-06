@@ -2,11 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/router"
+	"github.com/gorilla-go/go-framework/pkg/template"
 	"go.uber.org/fx"
-
-	"go-framework/pkg/config"
-	"go-framework/pkg/middleware"
-	"go-framework/pkg/template"
 )
 
 type IndexController struct {
@@ -15,7 +14,7 @@ type IndexController struct {
 	Config          *config.Config
 }
 
-func (i *IndexController) Annotation(rb *middleware.RouteBuilder) {
+func (i *IndexController) Annotation(rb *router.RouteBuilder) {
 	// 使用带名称的GET路由
 	rb.GET("/", i.Index, "index@index")
 }

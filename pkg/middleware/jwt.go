@@ -3,13 +3,12 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"go-framework/pkg/config"
-	appErrors "go-framework/pkg/errors"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla-go/go-framework/pkg/config"
 )
 
 // JWTClaims JWT声明
@@ -137,8 +136,7 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 
 		if !hasRole {
 			// 使用通用错误处理
-			appErr := appErrors.NewForbidden("权限不足", errors.New("用户没有所需角色"))
-			HandleAppError(c, appErr)
+			HandleUnauthorized(c, "权限不足", errors.New("用户没有所需角色"))
 			return
 		}
 

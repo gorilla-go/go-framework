@@ -1,11 +1,9 @@
 package router
 
-import "go-framework/pkg/middleware"
-
 // 路由注册控制器
-var Controllers = []middleware.RouterAnnotation{}
+var Controllers = []RouterAnnotation{}
 
-func RegisterControllers(controller ...middleware.RouterAnnotation) {
+func RegisterControllers(controller ...RouterAnnotation) {
 	Controllers = append(Controllers, controller...)
 }
 

@@ -5,8 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"go-framework/pkg/config"
-
+	"github.com/gorilla-go/go-framework/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

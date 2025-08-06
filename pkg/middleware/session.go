@@ -1,15 +1,14 @@
 package middleware
 
 import (
-	"go-framework/pkg/config"
 	"net/http"
-
 	"strconv"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
 )
 
 // SessionMiddleware 会话中间件

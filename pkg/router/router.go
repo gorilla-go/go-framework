@@ -1,16 +1,15 @@
 package router
 
 import (
-	"go-framework/pkg/config"
-	"go-framework/pkg/errors"
-	"go-framework/pkg/logger"
-	"go-framework/pkg/middleware"
-
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/logger"
+	"github.com/gorilla-go/go-framework/pkg/middleware"
 )
 
 type Router struct {
-	Controllers []middleware.RouterAnnotation
+	Controllers []RouterAnnotation
 	Cfg         *config.Config
 }
 
@@ -54,7 +53,7 @@ func (router *Router) Route() *gin.Engine {
 	r.Static("/static", cfg.Static.Path)
 
 	// 创建路由构建器
-	rb := middleware.NewRouteBuilder(r)
+	rb := NewRouteBuilder(r)
 
 	// 注册控制器路由
 	for _, controller := range router.Controllers {

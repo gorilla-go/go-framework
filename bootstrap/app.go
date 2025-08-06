@@ -3,14 +3,14 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"go-framework/pkg/config"
-	"go-framework/pkg/logger"
-	"go-framework/pkg/router"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/logger"
+	"github.com/gorilla-go/go-framework/pkg/router"
 	"go.uber.org/fx"
 )
 

@@ -2,9 +2,9 @@ package database
 
 import (
 	"fmt"
-	"go-framework/pkg/config"
 	"time"
 
+	"github.com/gorilla-go/go-framework/pkg/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
