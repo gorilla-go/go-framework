@@ -38,7 +38,7 @@ func InitLogger(cfg *config.LogConfig) error {
 
 	// 初始化zap
 	if err := initZap(cfg); err != nil {
-		return err
+		panic(err)
 	}
 
 	return nil

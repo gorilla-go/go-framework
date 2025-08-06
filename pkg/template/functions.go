@@ -85,7 +85,7 @@ func FuncMap() template.FuncMap {
 		// 块处理
 		"render": func(templatePath, blockName string, data any) template.HTML {
 			return RenderBlock(templatePath, blockName, data)
-		}, // 动态渲染指定模板中的块
+		},
 	}
 }
 

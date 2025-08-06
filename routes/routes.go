@@ -6,5 +6,7 @@ import (
 )
 
 func init() {
-	router.RegisterController(&controller.IndexController{})
+	router.RegisterControllers(
+		&controller.IndexController{},
+	)
 }

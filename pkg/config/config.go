@@ -112,11 +112,6 @@ type SessionConfig struct {
 	SameSite string `mapstructure:"same_site"`
 }
 
-var (
-	// GlobalConfig 全局配置实例
-	GlobalConfig *Config
-)
-
 // LoadConfig 从文件加载配置
 func LoadConfig(configPath string) (*Config, error) {
 	v := viper.New()
@@ -145,11 +140,5 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	GlobalConfig = config
 	return config, nil
-}
-
-// GetConfig 获取全局配置
-func GetConfig() *Config {
-	return GlobalConfig
 }

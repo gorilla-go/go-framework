@@ -13,16 +13,7 @@ import (
 )
 
 // SessionMiddleware 会话中间件
-func SessionMiddleware() gin.HandlerFunc {
-	// 使用全局配置，避免重复加载
-	cfg := config.GetConfig()
-	if cfg == nil {
-		panic("配置未初始化")
-	}
-
-	// 会话配置
-	sessionConfig := cfg.Session
-
+func SessionMiddleware(sessionConfig *config.SessionConfig, redisConfig *config.RedisConfig) gin.HandlerFunc {
 	// 创建存储
 	var store sessions.Store
 	var err error
@@ -31,10 +22,10 @@ func SessionMiddleware() gin.HandlerFunc {
 	switch sessionConfig.Store {
 	case "redis":
 		// 使用全局Redis配置
-		redisAddr := cfg.Redis.Host + ":" + strconv.Itoa(cfg.Redis.Port)
+		redisAddr := redisConfig.Host + ":" + strconv.Itoa(redisConfig.Port)
 
 		// redis.NewStore 参数: size, network, address, username, password, keyPairs
-		store, err = redis.NewStore(10, "tcp", redisAddr, "", cfg.Redis.Password, []byte(sessionConfig.Secret))
+		store, err = redis.NewStore(10, "tcp", redisAddr, "", redisConfig.Password, []byte(sessionConfig.Secret))
 		if err != nil {
 			panic(err)
 		}

@@ -8,7 +8,17 @@ import (
 // 定义错误码常量
 const (
 	// 成功
-	Success = 0
+	Success   = 200
+	NoContent = 204
+
+	// 重定向
+	MultipleChoices   = 300
+	MovedPermanently  = 301
+	Found             = 302
+	SeeOther          = 303
+	NotModified       = 304
+	TemporaryRedirect = 307
+	PermanentRedirect = 308
 
 	// 客户端错误
 	BadRequest       = 400
@@ -35,8 +45,16 @@ const (
 )
 
 // 错误码对应的消息
-var errMsg = map[int]string{
+var ErrMsg = map[int]string{
 	Success:             "成功",
+	NoContent:           "无内容",
+	MultipleChoices:     "多种选择",
+	MovedPermanently:    "永久移动",
+	Found:               "临时移动",
+	SeeOther:            "查看其他位置",
+	NotModified:         "未修改",
+	TemporaryRedirect:   "临时重定向",
+	PermanentRedirect:   "永久重定向",
 	BadRequest:          "无效的请求",
 	Unauthorized:        "未授权",
 	Forbidden:           "拒绝访问",
@@ -99,7 +117,7 @@ func (e *AppError) HTTPStatus() int {
 
 // New 创建新的错误
 func New(code int, detail string, err error) *AppError {
-	msg, ok := errMsg[code]
+	msg, ok := ErrMsg[code]
 	if !ok {
 		msg = "未知错误"
 	}
@@ -109,11 +127,6 @@ func New(code int, detail string, err error) *AppError {
 		Detail:  detail,
 		Err:     err,
 	}
-}
-
-// NewSuccess 创建成功响应
-func NewSuccess(detail string) *AppError {
-	return New(Success, detail, nil)
 }
 
 // NewBadRequest 创建无效请求错误

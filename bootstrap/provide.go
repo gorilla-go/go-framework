@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"github.com/gin-gonic/gin"
 	"go-framework/pkg/config"
 	"go-framework/pkg/database"
 	"go-framework/pkg/eventbus"
@@ -9,6 +8,8 @@ import (
 	"go-framework/pkg/middleware"
 	pkgRouter "go-framework/pkg/router"
 	"go-framework/pkg/template"
+
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -35,14 +36,6 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 		cfg.Server.Mode == "debug",
 	)
 
-	// 开发模式下不缓存模板且显示错误
-	if cfg.Server.Mode == "debug" {
-		tm.SetDevelopmentMode(true)
-		tm.SetShowErrors(true)
-	} else {
-		tm.SetShowErrors(false)
-	}
-
 	// 确保全局实例被初始化
 	template.InitGlobalTemplateManager(tm)
 
@@ -50,9 +43,10 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []middleware.RouterAnnotation) *pkgRouter.Router {
+func ProvideRouter(controllers []middleware.RouterAnnotation, cfg *config.Config) *pkgRouter.Router {
 	return &pkgRouter.Router{
 		Controllers: controllers,
+		Cfg:         cfg,
 	}
 }
 
@@ -63,7 +57,7 @@ func ProvideServer(router *pkgRouter.Router) *gin.Engine {
 
 // 提供控制器列表
 func ProvideControllers() []middleware.RouterAnnotation {
-	return pkgRouter.GetControllers()
+	return pkgRouter.Controllers
 }
 
 // 提供事件注册器

@@ -7,7 +7,6 @@ import (
 	"go-framework/pkg/logger"
 	"go-framework/pkg/router"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
@@ -100,15 +99,9 @@ func NewApp() *fx.App {
 		),
 		fx.Populate(router.ConvertController()...),
 
-		// 添加选项，禁用默认的信号处理，我们将自己处理
-		fx.NopLogger,
-
 		// 初始化日志
 		fx.Invoke(func(cfg *config.Config) {
-			if err := logger.InitLogger(&cfg.Log); err != nil {
-				fmt.Printf("初始化日志失败: %v\n", err)
-				os.Exit(1)
-			}
+			logger.InitLogger(&cfg.Log)
 		}),
 
 		// 注册钩子

@@ -3,16 +3,12 @@ package database
 import (
 	"fmt"
 	"go-framework/pkg/config"
-	"go-framework/pkg/logger"
 	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
-
-// DB 全局数据库实例
-var DB *gorm.DB
 
 // InitDB 初始化数据库连接
 func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
@@ -53,15 +49,5 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 		return nil, fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
-	logger.Info("数据库连接成功")
-
-	// 设置全局变量
-	DB = db
-
 	return db, nil
-}
-
-// GetDB 获取数据库连接
-func GetDB() *gorm.DB {
-	return DB
 }

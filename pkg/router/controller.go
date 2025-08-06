@@ -3,20 +3,15 @@ package router
 import "go-framework/pkg/middleware"
 
 // 路由注册控制器
-var controllers = []middleware.RouterAnnotation{}
+var Controllers = []middleware.RouterAnnotation{}
 
-func GetControllers() []middleware.RouterAnnotation {
-	return controllers
-}
-
-func RegisterController(controller middleware.RouterAnnotation) {
-	controllers = append(controllers, controller)
+func RegisterControllers(controller ...middleware.RouterAnnotation) {
+	Controllers = append(Controllers, controller...)
 }
 
 func ConvertController() []any {
-	cs := GetControllers()
-	anyControllers := make([]any, len(cs))
-	for i, controller := range cs {
+	anyControllers := make([]any, len(Controllers))
+	for i, controller := range Controllers {
 		anyControllers[i] = any(controller)
 	}
 	return anyControllers

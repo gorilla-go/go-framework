@@ -21,15 +21,14 @@ type JWTClaims struct {
 }
 
 // GenerateToken 生成JWT令牌
-func GenerateToken(userID uint, username string, role string) (string, error) {
+func GenerateToken(userID uint, username string, role string, cfg *config.JWTConfig) (string, error) {
 	// 获取配置
-	cfg := config.GetConfig()
 	if cfg == nil {
 		return "", errors.New("配置未加载")
 	}
 
 	// 设置过期时间
-	expireTime := time.Now().Add(time.Duration(cfg.JWT.Expire) * time.Hour)
+	expireTime := time.Now().Add(time.Duration(cfg.Expire) * time.Hour)
 
 	// 创建声明
 	claims := JWTClaims{
@@ -39,7 +38,7 @@ func GenerateToken(userID uint, username string, role string) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expireTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    cfg.JWT.Issuer,
+			Issuer:    cfg.Issuer,
 		},
 	}
 
@@ -47,7 +46,7 @@ func GenerateToken(userID uint, username string, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// 签名令牌
-	tokenString, err := token.SignedString([]byte(cfg.JWT.Secret))
+	tokenString, err := token.SignedString([]byte(cfg.Secret))
 	if err != nil {
 		return "", err
 	}
@@ -56,9 +55,7 @@ func GenerateToken(userID uint, username string, role string) (string, error) {
 }
 
 // ParseToken 解析JWT令牌
-func ParseToken(tokenString string) (*JWTClaims, error) {
-	// 获取配置
-	cfg := config.GetConfig()
+func ParseToken(tokenString string, cfg *config.JWTConfig) (*JWTClaims, error) {
 	if cfg == nil {
 		return nil, errors.New("配置未加载")
 	}
@@ -69,7 +66,7 @@ func ParseToken(tokenString string) (*JWTClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("无效的签名算法: %v", token.Header["alg"])
 		}
-		return []byte(cfg.JWT.Secret), nil
+		return []byte(cfg.Secret), nil
 	})
 
 	if err != nil {
@@ -85,7 +82,7 @@ func ParseToken(tokenString string) (*JWTClaims, error) {
 }
 
 // JWTMiddleware JWT认证中间件
-func JWTMiddleware() gin.HandlerFunc {
+func JWTMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从请求头获取token
 		authHeader := c.GetHeader("Authorization")
@@ -102,7 +99,7 @@ func JWTMiddleware() gin.HandlerFunc {
 		}
 
 		// 解析令牌
-		claims, err := ParseToken(parts[1])
+		claims, err := ParseToken(parts[1], cfg)
 		if err != nil {
 			HandleUnauthorized(c, "无效的认证信息", err)
 			return

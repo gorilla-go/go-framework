@@ -20,7 +20,6 @@ type TemplateManager struct {
 	mutex           sync.RWMutex
 	defaultLayout   string
 	developmentMode bool
-	showErrors      bool // 是否显示模板错误
 }
 
 // NewTemplateManager 创建一个新的模板管理器
@@ -33,7 +32,6 @@ func NewTemplateManager(templatesDir, layoutsDir, extension string, isDevelopmen
 		funcMap:         FuncMap(),
 		defaultLayout:   "main",
 		developmentMode: isDevelopment,
-		showErrors:      isDevelopment, // 默认显示错误
 	}
 }
 
@@ -41,11 +39,6 @@ func NewTemplateManager(templatesDir, layoutsDir, extension string, isDevelopmen
 // 在开发模式下，每次渲染模板都会重新加载模板文件
 func (tm *TemplateManager) SetDevelopmentMode(mode bool) {
 	tm.developmentMode = mode
-}
-
-// SetShowErrors 设置是否显示模板错误
-func (tm *TemplateManager) SetShowErrors(show bool) {
-	tm.showErrors = show
 }
 
 // SetDefaultLayout 设置默认布局
@@ -158,7 +151,7 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout str
 // handleError 处理模板错误
 func (tm *TemplateManager) handleError(w io.Writer, err error) error {
 	// 如果需要显示错误，则渲染错误信息
-	if tm.showErrors {
+	if tm.developmentMode {
 		errorHTML := fmt.Sprintf(`
 		<div style="color:rgb(211, 50, 66); background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 15px; border-radius: 4px;">
 			<h3 style="margin-top: 0;">模板渲染错误</h3>

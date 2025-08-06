@@ -2,6 +2,7 @@ package router
 
 import (
 	"go-framework/pkg/config"
+	"go-framework/pkg/errors"
 	"go-framework/pkg/logger"
 	"go-framework/pkg/middleware"
 
@@ -10,12 +11,13 @@ import (
 
 type Router struct {
 	Controllers []middleware.RouterAnnotation
+	Cfg         *config.Config
 }
 
 // Route 设置路由
 func (router *Router) Route() *gin.Engine {
 	// 使用全局配置
-	cfg := config.GetConfig()
+	cfg := router.Cfg
 	if cfg == nil {
 		logger.Fatal("配置未初始化")
 	}
@@ -27,11 +29,16 @@ func (router *Router) Route() *gin.Engine {
 	r := gin.New()
 
 	// 添加全局中间件
-	r.Use(middleware.RecoveryMiddleware()) // 错误恢复，应该最先加载
-	r.Use(gin.Logger())                    // gin 请求日志
-	r.Use(middleware.LoggerMiddleware())   // 请求日志
-	r.Use(middleware.SecurityMiddleware()) // 安全相关头部
-	r.Use(middleware.SessionMiddleware())  // 会话管理
+	r.Use(
+		middleware.RecoveryMiddleware(),
+		gin.Logger(),
+		middleware.LoggerMiddleware(),
+		middleware.SecurityMiddleware(),
+		middleware.SessionMiddleware(
+			&router.Cfg.Session,
+			&router.Cfg.Redis,
+		),
+	)
 
 	// 根据配置启用 gzip 压缩
 	if cfg.Gzip.Enabled {
@@ -56,7 +63,7 @@ func (router *Router) Route() *gin.Engine {
 
 	// 404处理
 	r.NoRoute(func(c *gin.Context) {
-		middleware.HandleNotFound(c, "页面不存在", nil)
+		middleware.HandleNotFound(c, errors.ErrMsg[errors.NotFound], nil)
 	})
 
 	return r
