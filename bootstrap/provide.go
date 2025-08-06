@@ -1,17 +1,14 @@
-package di
+package bootstrap
 
 import (
-	"go-framework/internal/controller"
-	"go-framework/internal/router"
+	"github.com/gin-gonic/gin"
 	"go-framework/pkg/config"
 	"go-framework/pkg/database"
 	"go-framework/pkg/eventbus"
 	"go-framework/pkg/logger"
 	"go-framework/pkg/middleware"
+	pkgRouter "go-framework/pkg/router"
 	"go-framework/pkg/template"
-
-	"github.com/gin-gonic/gin"
-	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -53,51 +50,23 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []middleware.RouterAnnotation) *router.Router {
-	return &router.Router{
+func ProvideRouter(controllers []middleware.RouterAnnotation) *pkgRouter.Router {
+	return &pkgRouter.Router{
 		Controllers: controllers,
 	}
 }
 
 // 提供HTTP服务器
-func ProvideServer(router *router.Router) *gin.Engine {
+func ProvideServer(router *pkgRouter.Router) *gin.Engine {
 	return router.Route()
 }
 
 // 提供控制器列表
 func ProvideControllers() []middleware.RouterAnnotation {
-	return controllers
+	return pkgRouter.GetControllers()
 }
 
 // 提供事件注册器
 func ProvideEventBus() *eventbus.EventBus {
 	return eventbus.New()
-}
-
-// 转换控制器数组为任意类型数组，用于依赖注入
-func ConvertControllerArrToAny(controllers []middleware.RouterAnnotation) []any {
-	anyControllers := make([]any, len(controllers))
-	for i, controller := range controllers {
-		anyControllers[i] = any(controller)
-	}
-	return anyControllers
-}
-
-// 注册所有模块
-var Module = fx.Options(
-	fx.Provide(
-		ProvideConfig,
-		ProvideEventBus,
-		ProvideDatabase,
-		ProvideTemplateManager,
-		ProvideControllers,
-		ProvideRouter,
-		ProvideServer,
-	),
-	fx.Populate(ConvertControllerArrToAny(controllers)...),
-)
-
-// 路由注册控制器
-var controllers = []middleware.RouterAnnotation{
-	&controller.IndexController{},
 }
