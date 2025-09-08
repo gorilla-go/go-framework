@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/eventbus"
 	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/router"
-	pkgRouter "github.com/gorilla-go/go-framework/pkg/router"
 	"github.com/gorilla-go/go-framework/pkg/template"
 	"gorm.io/gorm"
 )
@@ -42,21 +41,21 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []router.RouterAnnotation, cfg *config.Config) *pkgRouter.Router {
-	return &pkgRouter.Router{
+func ProvideRouter(controllers []router.RouterAnnotation, cfg *config.Config) *router.Router {
+	return &router.Router{
 		Controllers: controllers,
 		Cfg:         cfg,
 	}
 }
 
 // 提供HTTP服务器
-func ProvideServer(router *pkgRouter.Router) *gin.Engine {
+func ProvideServer(router *router.Router) *gin.Engine {
 	return router.Route()
 }
 
 // 提供控制器列表
 func ProvideControllers() []router.RouterAnnotation {
-	return pkgRouter.Controllers
+	return router.Controllers
 }
 
 // 提供事件注册器
