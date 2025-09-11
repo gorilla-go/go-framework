@@ -19,6 +19,7 @@ vendor/
 
 # 忽略IDE和编辑器生成的文件
 .idea/
+.github/
 .vscode/
 *.swp
 *.swo
