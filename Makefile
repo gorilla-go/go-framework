@@ -4,7 +4,7 @@
 all: dev
 
 # 安装依赖
-install-deps:
+install:
 	@echo "安装 Node.js 依赖..."
 	@cd static && npm install
 
@@ -89,5 +89,5 @@ help:
 	@echo "  make start-d     - 构建并在后台启动生产服务"
 	@echo "  make stop        - 停止运行的应用程序"
 	@echo "  make clean       - 清理临时文件和进程"
-	@echo "  make install-deps - 安装前端依赖"
+	@echo "  make install - 安装前端依赖"
 	@echo "  make gulp-build  - 构建静态资源" 
