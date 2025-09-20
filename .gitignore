@@ -1,6 +1,7 @@
 # 忽略日志文件和目录
 logs/
 *.log
+**/node_modules/
 
 # 忽略二进制文件
 bin/
@@ -17,7 +18,7 @@ tmp/
 # 忽略依赖目录
 vendor/
 
-static/node_modules/
+
 
 # 忽略IDE和编辑器生成的文件
 .idea/
