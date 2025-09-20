@@ -88,15 +88,7 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 func NewApp() *fx.App {
 	app := fx.New(
 		// 注册所有模块
-		fx.Provide(
-			ProvideConfig,
-			ProvideEventBus,
-			ProvideDatabase,
-			ProvideTemplateManager,
-			ProvideControllers,
-			ProvideRouter,
-			ProvideServer,
-		),
+		fx.Provide(provides...),
 		fx.Populate(router.ConvertController()...),
 
 		// 初始化日志

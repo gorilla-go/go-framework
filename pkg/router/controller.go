@@ -1,9 +1,13 @@
 package router
 
-// 路由注册控制器
-var Controllers = []RouterAnnotation{}
+type IController interface {
+	RouterAnnotation
+}
 
-func RegisterControllers(controller ...RouterAnnotation) {
+// 路由注册控制器
+var Controllers = []IController{}
+
+func RegisterControllers(controller ...IController) {
 	Controllers = append(Controllers, controller...)
 }
 

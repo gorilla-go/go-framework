@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/database"
 	"github.com/gorilla-go/go-framework/pkg/eventbus"
@@ -11,8 +10,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// 服务注册表
+var provides = []any{
+	ServerConfig,
+	EventBus,
+	Database,
+	TemplateManager,
+	Controllers,
+	Router,
+}
+
 // 提供配置
-func ProvideConfig() *config.Config {
+func ServerConfig() *config.Config {
 	cfg, err := config.LoadConfig("")
 	if err != nil {
 		logger.Fatalf("加载配置失败: %v", err)
@@ -21,12 +30,12 @@ func ProvideConfig() *config.Config {
 }
 
 // 提供数据库连接
-func ProvideDatabase(cfg *config.Config) (*gorm.DB, error) {
+func Database(cfg *config.Config) (*gorm.DB, error) {
 	return database.InitDB(&cfg.Database)
 }
 
 // 提供模板管理器
-func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
+func TemplateManager(cfg *config.Config) *template.TemplateManager {
 	tm := template.NewTemplateManager(
 		cfg.Template.Path,
 		cfg.Template.Layouts,
@@ -41,24 +50,19 @@ func ProvideTemplateManager(cfg *config.Config) *template.TemplateManager {
 }
 
 // 提供路由器
-func ProvideRouter(controllers []router.RouterAnnotation, cfg *config.Config) *router.Router {
+func Router(controllers []router.IController, cfg *config.Config) *router.Router {
 	return &router.Router{
 		Controllers: controllers,
 		Cfg:         cfg,
 	}
 }
 
-// 提供HTTP服务器
-func ProvideServer(router *router.Router) *gin.Engine {
-	return router.Route()
-}
-
 // 提供控制器列表
-func ProvideControllers() []router.RouterAnnotation {
+func Controllers() []router.IController {
 	return router.Controllers
 }
 
 // 提供事件注册器
-func ProvideEventBus() *eventbus.EventBus {
+func EventBus() *eventbus.EventBus {
 	return eventbus.New()
 }

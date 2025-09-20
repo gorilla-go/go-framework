@@ -9,7 +9,7 @@ import (
 )
 
 type Router struct {
-	Controllers []RouterAnnotation
+	Controllers []IController
 	Cfg         *config.Config
 }
 
