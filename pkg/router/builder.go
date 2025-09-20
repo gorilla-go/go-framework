@@ -14,12 +14,8 @@ type RouteBuilder struct {
 	group  *gin.RouterGroup
 }
 
-// RouterAnnotation 路由注册接口
-// 所有需要注册路由的控制器都应实现此接口
 type RouterAnnotation interface {
 	// Annotation 注册路由
-	// rb 是路由构建器
-	// 每个控制器负责注册自己的路由
 	Annotation(rb *RouteBuilder)
 }
 
@@ -74,36 +70,36 @@ func (rb *RouteBuilder) DELETE(path string, handler gin.HandlerFunc, name string
 
 // 注册路由，内部函数
 func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.HandlerFunc) {
-	// 如果没有提供名称，使用默认命名规则
 	if name == "" {
 		name = fmt.Sprintf("%s:%s", method, path)
 	}
 
-	// 注册到gin
-	switch method {
-	case "GET":
+	// HTTP方法到Gin方法的映射
+	methodHandlers := map[string]func(string, ...gin.HandlerFunc) gin.IRoutes{
+		"GET":     rb.router.GET,
+		"POST":    rb.router.POST,
+		"PUT":     rb.router.PUT,
+		"DELETE":  rb.router.DELETE,
+		"PATCH":   rb.router.PATCH,
+		"HEAD":    rb.router.HEAD,
+		"OPTIONS": rb.router.OPTIONS,
+	}
+
+	if handlerFunc, exists := methodHandlers[method]; exists {
 		if rb.group != nil {
-			rb.group.GET(path, handler)
+			// 使用路由组的方法映射
+			groupHandlers := map[string]func(string, ...gin.HandlerFunc) gin.IRoutes{
+				"GET":     rb.group.GET,
+				"POST":    rb.group.POST,
+				"PUT":     rb.group.PUT,
+				"DELETE":  rb.group.DELETE,
+				"PATCH":   rb.group.PATCH,
+				"HEAD":    rb.group.HEAD,
+				"OPTIONS": rb.group.OPTIONS,
+			}
+			groupHandlers[method](path, handler)
 		} else {
-			rb.router.GET(path, handler)
-		}
-	case "POST":
-		if rb.group != nil {
-			rb.group.POST(path, handler)
-		} else {
-			rb.router.POST(path, handler)
-		}
-	case "PUT":
-		if rb.group != nil {
-			rb.group.PUT(path, handler)
-		} else {
-			rb.router.PUT(path, handler)
-		}
-	case "DELETE":
-		if rb.group != nil {
-			rb.group.DELETE(path, handler)
-		} else {
-			rb.router.DELETE(path, handler)
+			handlerFunc(path, handler)
 		}
 	}
 
@@ -111,18 +107,10 @@ func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.Han
 	routesMutex.Lock()
 	defer routesMutex.Unlock()
 
-	var fullPath string
+	fullPath := path
 	if rb.group != nil {
-		// 获取路由组的路径前缀
-		groupPrefix := ""
-		if rb.group != nil && len(rb.group.Handlers) > 0 {
-			// Gin的路由组没有直接暴露前缀，这里需要一个变通的方法
-			// 实际项目中，你可能需要单独记录路由组前缀
-			groupPrefix = "/"
-		}
-		fullPath = groupPrefix + path
-	} else {
-		fullPath = path
+		// 获取路由组的基础路径
+		fullPath = rb.getGroupBasePath() + path
 	}
 
 	routes[name] = &Route{
@@ -131,6 +119,17 @@ func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.Han
 		Method:  method,
 		Handler: handler,
 	}
+}
+
+// 获取路由组的基础路径
+func (rb *RouteBuilder) getGroupBasePath() string {
+	if rb.group == nil {
+		return ""
+	}
+	// Gin路由组的基础路径需要从路由组对象中提取
+	// 这里使用一个简单的方法来获取基础路径
+	// 实际可能需要更复杂的逻辑来获取完整路径
+	return "/"
 }
 
 // PATCH 注册PATCH请求路由
@@ -161,16 +160,9 @@ func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
 	routesMutex.Lock()
 	defer routesMutex.Unlock()
 
-	var fullPath string
+	fullPath := path
 	if rb.group != nil {
-		// 获取路由组的路径前缀
-		groupPrefix := ""
-		if rb.group != nil && len(rb.group.Handlers) > 0 {
-			groupPrefix = "/"
-		}
-		fullPath = groupPrefix + path
-	} else {
-		fullPath = path
+		fullPath = rb.getGroupBasePath() + path
 	}
 
 	routes[name] = &Route{
@@ -188,30 +180,16 @@ func BuildUrl(name string, params ...map[string]any) (string, error) {
 	routesMutex.RUnlock()
 
 	if !exists {
-		return "", fmt.Errorf("路由不存在: %s", name) // 路由不存在时返回错误
+		return "", fmt.Errorf("路由不存在: %s", name)
 	}
 
 	path := route.Path
 
-	// 替换参数
 	if len(params) > 0 {
 		for key, value := range params[0] {
 			paramPlaceholder := ":" + key
-			// 将参数值转换为字符串
-			var strValue string
-			switch v := value.(type) {
-			case string:
-				strValue = v
-			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-				strValue = fmt.Sprintf("%d", v)
-			case float32, float64:
-				strValue = fmt.Sprintf("%g", v)
-			case bool:
-				strValue = fmt.Sprintf("%t", v)
-			default:
-				strValue = fmt.Sprintf("%v", v)
-			}
-			path = strings.Replace(path, paramPlaceholder, strValue, -1)
+			strValue := fmt.Sprintf("%v", value)
+			path = strings.ReplaceAll(path, paramPlaceholder, strValue)
 		}
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,33 +20,24 @@ const (
 
 // 全局HTTP服务器实例，便于在信号处理中访问
 var (
-	httpServer     *http.Server
-	httpServerLock sync.Mutex
+	httpServer *http.Server
 )
 
 // RegisterHooks 注册应用程序钩子
 func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			// 创建HTTP服务器
-			srv := &http.Server{
-				Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
-				Handler: router,
-				// 添加读写超时设置
+			httpServer = &http.Server{
+				Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+				Handler:      router,
 				ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
 				WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
 				IdleTimeout:  time.Duration(cfg.Server.IdleTimeout) * time.Second,
 			}
 
-			// 保存到全局变量
-			httpServerLock.Lock()
-			httpServer = srv
-			httpServerLock.Unlock()
-
-			// 在单独的goroutine中启动服务器
 			go func() {
-				logger.Infof("HTTP服务器启动在 %d 端口", cfg.Server.Port)
-				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Infof("HTTP服务器启动在端口 %d", cfg.Server.Port)
+				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					logger.Fatalf("HTTP服务器启动失败: %v", err)
 				}
 			}()
@@ -58,22 +48,15 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 		OnStop: func(ctx context.Context) error {
 			logger.Info("正在关闭HTTP服务器...")
 
-			// 获取服务器实例
-			httpServerLock.Lock()
-			srv := httpServer
-			httpServerLock.Unlock()
-
-			if srv == nil {
-				logger.Warn("HTTP服务器实例为空，无法关闭")
+			if httpServer == nil {
+				logger.Warn("HTTP服务器实例为空，跳过关闭")
 				return nil
 			}
 
-			// 给服务器关闭的超时时间
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 			defer cancel()
 
-			// 优雅关闭服务器
-			if err := srv.Shutdown(shutdownCtx); err != nil {
+			if err := httpServer.Shutdown(shutdownCtx); err != nil {
 				logger.Errorf("服务器关闭出错: %v", err)
 				return err
 			}
@@ -88,13 +71,22 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 func NewApp() *fx.App {
 	app := fx.New(
 		// 注册所有模块
-		fx.Provide(provides...),
-		fx.Populate(router.ConvertController()...),
+		fx.Provide([]any{
+			Config,
+			EventBus,
+			Database,
+			TemplateManager,
+			Controllers,
+			Router,
+		}...),
 
 		// 初始化日志
 		fx.Invoke(func(cfg *config.Config) {
 			logger.InitLogger(&cfg.Log)
 		}),
+
+		// 控制器初始化
+		fx.Populate(router.ConvertController()...),
 
 		// 注册钩子
 		fx.Invoke(RegisterHooks),

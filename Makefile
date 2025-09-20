@@ -23,7 +23,6 @@ dev: gulp-build
 	export GIN_MODE=debug; \
 	echo "启动开发环境, 监控文件变更..."; \
 	(cd static && npm run watch &); \
-	(npx @agentdeskai/browser-tools-server &); \
 	$$AIR_PATH
 
 # 生产环境构建

@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/router"
 	"github.com/gorilla-go/go-framework/pkg/template"
 	"go.uber.org/fx"
@@ -11,7 +10,6 @@ import (
 type IndexController struct {
 	fx.In
 	TemplateManager *template.TemplateManager
-	Config          *config.Config
 }
 
 func (i *IndexController) Annotation(rb *router.RouteBuilder) {

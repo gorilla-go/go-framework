@@ -12,9 +12,9 @@ func RegisterControllers(controller ...IController) {
 }
 
 func ConvertController() []any {
-	anyControllers := make([]any, len(Controllers))
-	for i, controller := range Controllers {
-		anyControllers[i] = any(controller)
+	controllers := make([]any, len(Controllers))
+	for i, v := range Controllers {
+		controllers[i] = v
 	}
-	return anyControllers
+	return controllers
 }

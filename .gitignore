@@ -17,6 +17,8 @@ tmp/
 # 忽略依赖目录
 vendor/
 
+static/node_modules/
+
 # 忽略IDE和编辑器生成的文件
 .idea/
 .github/
