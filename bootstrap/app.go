@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/router"
+	"github.com/gorilla-go/go-framework/pkg/template"
 	"go.uber.org/fx"
 )
 
@@ -36,7 +37,7 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 			}
 
 			go func() {
-				logger.Infof("HTTP服务器启动在端口 %d", cfg.Server.Port)
+				logger.Infof("HTTP服务器启动在端口: %d", cfg.Server.Port)
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					logger.Fatalf("HTTP服务器启动失败: %v", err)
 				}
@@ -49,7 +50,6 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 			logger.Info("正在关闭HTTP服务器...")
 
 			if httpServer == nil {
-				logger.Warn("HTTP服务器实例为空，跳过关闭")
 				return nil
 			}
 
@@ -61,7 +61,7 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 				return err
 			}
 
-			logger.Info("服务器已优雅关闭")
+			logger.Info("服务器已关闭")
 			return nil
 		},
 	})
@@ -75,14 +75,17 @@ func NewApp() *fx.App {
 			Config,
 			EventBus,
 			Database,
-			TemplateManager,
 			Controllers,
 			Router,
 		}...),
 
-		// 初始化日志
+		// 初始化
 		fx.Invoke(func(cfg *config.Config) {
+			// 初始化日志
 			logger.InitLogger(&cfg.Log)
+
+			// 初始化模板引擎
+			template.InitTemplateManager(cfg.Template, cfg.Server.Mode == "debug")
 		}),
 
 		// 控制器初始化

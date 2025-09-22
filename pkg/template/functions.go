@@ -3,16 +3,15 @@ package template
 
 import (
 	"fmt"
-	"github.com/gorilla-go/go-framework/pkg/router"
 	"html/template"
 	"math"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
-)
 
-var templateManager *TemplateManager = nil
+	"github.com/gorilla-go/go-framework/pkg/router"
+)
 
 // 最常用的模板函数集合
 // FuncMap 返回可用于HTML模板的函数映射
@@ -855,50 +854,6 @@ func MapSet(m any, key any, value any) map[any]any {
 	// 设置新的键值对
 	result[key] = value
 	return result
-}
-
-// RenderBlock 动态加载指定模板文件中的特定块(block)并渲染
-//
-// 模板使用示例:
-// {{ render "components/card" "content" .CardData }} <!-- 渲染 components/card.html 中的 "content" 块 -->
-func RenderBlock(templatePath, blockName string, data any) template.HTML {
-	// 使用全局的 templateManager 单例
-	if templateManager == nil {
-		panic("模板管理器未初始化，无法加载模板")
-	}
-
-	// 创建一个缓冲区用于存放渲染结果
-	var buf strings.Builder
-
-	// 使用一个独立的函数来处理模板渲染，这样可以更好地捕获错误
-	err := renderTemplateBlock(templatePath, blockName, data, &buf)
-	if err != nil {
-		return template.HTML(fmt.Sprintf(`<div class="error">渲染模板失败: %s</div>`,
-			template.HTMLEscapeString(err.Error())))
-	}
-
-	return template.HTML(buf.String())
-}
-
-// 辅助函数：用于渲染模板块
-func renderTemplateBlock(templatePath, blockName string, data any, buf *strings.Builder) error {
-	tmpl, err := templateManager.loadTemplate(templatePath, "")
-	if err != nil {
-		return fmt.Errorf("无法解析模板 '%s': %v", templatePath, err)
-	}
-
-	// 查找指定的块
-	blockTmpl := tmpl.Lookup(blockName)
-	if blockTmpl == nil {
-		return fmt.Errorf("模板 '%s' 中找不到块 '%s'", templatePath, blockName)
-	}
-
-	// 执行模板，写入缓冲区
-	if err := blockTmpl.Execute(buf, data); err != nil {
-		return fmt.Errorf("渲染块 '%s' 失败: %v", blockName, err)
-	}
-
-	return nil
 }
 
 // NewMap 创建一个字典/映射

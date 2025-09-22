@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"maps"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/logger"
 )
+
+var Template *TemplateManager = nil
 
 // TemplateManager 模板管理器，负责模板的加载、缓存和渲染
 type TemplateManager struct {
@@ -23,46 +27,21 @@ type TemplateManager struct {
 }
 
 // NewTemplateManager 创建一个新的模板管理器
-func NewTemplateManager(templatesDir, layoutsDir, extension string, isDevelopment bool) *TemplateManager {
-	return &TemplateManager{
-		templatesDir:    templatesDir,
-		layoutsDir:      layoutsDir,
-		extension:       extension,
+func InitTemplateManager(cfg config.TemplateConfig, isDevelopment bool) *TemplateManager {
+	Template = &TemplateManager{
+		templatesDir:    cfg.Path,
+		layoutsDir:      cfg.Layouts,
+		extension:       cfg.Extension,
 		templates:       make(map[string]*template.Template),
 		funcMap:         FuncMap(),
 		defaultLayout:   "main",
 		developmentMode: isDevelopment,
 	}
-}
-
-// SetDevelopmentMode 设置开发模式
-// 在开发模式下，每次渲染模板都会重新加载模板文件
-func (tm *TemplateManager) SetDevelopmentMode(mode bool) {
-	tm.developmentMode = mode
-}
-
-// SetDefaultLayout 设置默认布局
-func (tm *TemplateManager) SetDefaultLayout(layout string) {
-	tm.defaultLayout = layout
-}
-
-// AddFunc 添加自定义模板函数
-func (tm *TemplateManager) AddFunc(name string, fn any) {
-	tm.mutex.Lock()
-	defer tm.mutex.Unlock()
-
-	tm.funcMap[name] = fn
-}
-
-// AddFuncs 添加多个自定义模板函数
-func (tm *TemplateManager) AddFuncs(funcs template.FuncMap) {
-	tm.mutex.Lock()
-	defer tm.mutex.Unlock()
-	maps.Copy(tm.funcMap, funcs)
+	return Template
 }
 
 // loadTemplate 加载模板
-func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, error) {
+func loadTemplate(names ...string) (*template.Template, error) {
 	var tmpl *template.Template
 	var err error
 	var ok bool
@@ -71,11 +50,11 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 	cacheKey := strings.Join(names, ":")
 
 	// 开发模式下不使用缓存，每次都重新加载模板
-	if !tm.developmentMode {
+	if !Template.developmentMode {
 		// 尝试从缓存中获取模板
-		tm.mutex.RLock()
-		tmpl, ok = tm.templates[cacheKey]
-		tm.mutex.RUnlock()
+		Template.mutex.RLock()
+		tmpl, ok = Template.templates[cacheKey]
+		Template.mutex.RUnlock()
 
 		// 如果在缓存中找到，直接返回
 		if ok {
@@ -96,14 +75,14 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 		if len(name) == 0 {
 			continue
 		}
-		allTemplateFiles = append(allTemplateFiles, filepath.Join(tm.templatesDir, name+tm.extension))
+		allTemplateFiles = append(allTemplateFiles, filepath.Join(Template.templatesDir, name+Template.extension))
 	}
 
 	// 确定主模板名称（基础模板）- 使用第一个模板作为基础
 	baseTemplateName := filepath.Base(allTemplateFiles[0])
 
 	// 创建带函数的基础模板
-	tmpl = template.New(baseTemplateName).Funcs(tm.funcMap)
+	tmpl = template.New(baseTemplateName).Funcs(Template.funcMap)
 
 	// 解析所有模板文件
 	tmpl, err = tmpl.ParseFiles(allTemplateFiles...)
@@ -112,17 +91,17 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 	}
 
 	// 非开发模式下缓存模板
-	if !tm.developmentMode {
-		tm.mutex.Lock()
-		tm.templates[cacheKey] = tmpl
-		tm.mutex.Unlock()
+	if !Template.developmentMode {
+		Template.mutex.Lock()
+		Template.templates[cacheKey] = tmpl
+		Template.mutex.Unlock()
 	}
 
 	return tmpl, nil
 }
 
 // Render 渲染模板
-func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout string) error {
+func Render(w io.Writer, name string, data any, layout string) error {
 	var templateNames []string
 
 	// 如果指定了布局，添加布局模板
@@ -135,23 +114,23 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout str
 	templateNames = append(templateNames, name)
 
 	// 加载并渲染模板
-	tmpl, err := tm.loadTemplate(templateNames...)
+	tmpl, err := loadTemplate(templateNames...)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
 
 	// 渲染模板
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
 	return nil
 }
 
 // handleError 处理模板错误
-func (tm *TemplateManager) handleError(w io.Writer, err error) error {
+func handleError(w io.Writer, err error) error {
 	// 如果需要显示错误，则渲染错误信息
-	if tm.developmentMode {
+	if Template.developmentMode {
 		errorHTML := fmt.Sprintf(`
 		<div style="color:rgb(211, 50, 66); background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 15px; border-radius: 4px;">
 			<h3 style="margin-top: 0;">模板渲染错误</h3>
@@ -167,62 +146,98 @@ func (tm *TemplateManager) handleError(w io.Writer, err error) error {
 }
 
 // RenderWithDefaultLayout 使用默认布局渲染模板
-func (tm *TemplateManager) RenderWithDefaultLayout(w io.Writer, name string, data any) error {
+func RenderWithDefaultLayout(w io.Writer, name string, data any) error {
 	// 如果有默认布局，则同时加载布局和内容模板
-	if tm.defaultLayout != "" {
-		return tm.Render(w, name, data, tm.defaultLayout)
+	if Template.defaultLayout != "" {
+		return Render(w, name, data, Template.defaultLayout)
 	}
 	// 否则只加载内容模板
-	panic("没有默认布局")
+	logger.Fatal("没有默认布局")
+	return nil
 }
 
 // RenderPartial 渲染部分模板（不使用布局）
-func (tm *TemplateManager) RenderPartial(w io.Writer, name string, data any) error {
+func RenderPartial(w io.Writer, name string, data any) error {
 	// 使用loadTemplate加载模板
-	tmpl, err := tm.loadTemplate(name)
+	tmpl, err := loadTemplate(name)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
 
 	// 渲染模板
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
 	return nil
 }
 
 // RenderWithoutLayout 渲染不带布局的模板
-func (tm *TemplateManager) RenderWithoutLayout(w io.Writer, name string, data any) error {
-	return tm.RenderPartial(w, name, data)
+func RenderWithoutLayout(w io.Writer, name string, data any) error {
+	return RenderPartial(w, name, data)
 }
 
 // ClearCache 清除模板缓存
-func (tm *TemplateManager) ClearCache() {
-	tm.mutex.Lock()
-	defer tm.mutex.Unlock()
+func ClearCache() {
+	Template.mutex.Lock()
+	defer Template.mutex.Unlock()
 
-	tm.templates = make(map[string]*template.Template)
-}
-
-// InitGlobalTemplateManager 初始化全局模板管理器
-// 这确保在使用RenderBlock等函数时，全局templateManager已被正确设置
-func InitGlobalTemplateManager(tm *TemplateManager) {
-	templateManager = tm
+	Template.templates = make(map[string]*template.Template)
 }
 
 // RenderMultiple 渲染多个模板
-func (tm *TemplateManager) RenderMultiple(w io.Writer, data any, names ...string) error {
+func RenderMultiple(w io.Writer, data any, names ...string) error {
 	// 加载多个模板
-	tmpl, err := tm.loadTemplate(names...)
+	tmpl, err := loadTemplate(names...)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
 
 	// 渲染模板
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		return tm.handleError(w, err)
+		return handleError(w, err)
 	}
+	return nil
+}
+
+// RenderBlock 动态加载指定模板文件中的特定块(block)并渲染
+//
+// 模板使用示例:
+// {{ render "components/card" "content" .CardData }} <!-- 渲染 components/card.html 中的 "content" 块 -->
+func RenderBlock(templatePath, blockName string, data any) template.HTML {
+	// 创建一个缓冲区用于存放渲染结果
+	var buf strings.Builder
+
+	// 使用一个独立的函数来处理模板渲染，这样可以更好地捕获错误
+	err := renderTemplateBlock(templatePath, blockName, data, &buf)
+	if err != nil {
+		return template.HTML(
+			fmt.Sprintf(`<div class="error">渲染模板失败: %s</div>`,
+				template.HTMLEscapeString(err.Error())),
+		)
+	}
+
+	return template.HTML(buf.String())
+}
+
+// 辅助函数：用于渲染模板块
+func renderTemplateBlock(templatePath, blockName string, data any, buf *strings.Builder) error {
+	tmpl, err := loadTemplate(templatePath, "")
+	if err != nil {
+		return fmt.Errorf("无法解析模板 '%s': %v", templatePath, err)
+	}
+
+	// 查找指定的块
+	blockTmpl := tmpl.Lookup(blockName)
+	if blockTmpl == nil {
+		return fmt.Errorf("模板 '%s' 中找不到块 '%s'", templatePath, blockName)
+	}
+
+	// 执行模板，写入缓冲区
+	if err := blockTmpl.Execute(buf, data); err != nil {
+		return fmt.Errorf("渲染块 '%s' 失败: %v", blockName, err)
+	}
+
 	return nil
 }

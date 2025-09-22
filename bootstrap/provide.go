@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/eventbus"
 	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/router"
-	"github.com/gorilla-go/go-framework/pkg/template"
 	"gorm.io/gorm"
 
 	_ "github.com/gorilla-go/go-framework/routes"
@@ -29,21 +28,6 @@ func Database(cfg *config.Config) *gorm.DB {
 		logger.Fatalf("初始化数据库失败: %v", err)
 	}
 	return db
-}
-
-// 提供模板管理器
-func TemplateManager(cfg *config.Config) *template.TemplateManager {
-	tm := template.NewTemplateManager(
-		cfg.Template.Path,
-		cfg.Template.Layouts,
-		cfg.Template.Extension,
-		cfg.Server.Mode == "debug",
-	)
-
-	// 确保全局实例被初始化
-	template.InitGlobalTemplateManager(tm)
-
-	return tm
 }
 
 // 提供路由器

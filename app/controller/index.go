@@ -9,7 +9,6 @@ import (
 
 type IndexController struct {
 	fx.In
-	TemplateManager *template.TemplateManager
 }
 
 func (i *IndexController) Annotation(rb *router.RouteBuilder) {
@@ -130,5 +129,6 @@ func (c *Controller) Show(ctx *gin.Context) {
 		},
 	}
 
-	i.TemplateManager.RenderWithDefaultLayout(ctx.Writer, "index", data)
+	// 使用模板引擎渲染模板
+	template.RenderWithDefaultLayout(ctx.Writer, "index", data)
 }
