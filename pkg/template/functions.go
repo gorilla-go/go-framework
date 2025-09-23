@@ -43,10 +43,11 @@ func FuncMap() template.FuncMap {
 		"round":    Round,
 
 		// 日期时间处理（最常用）
-		"now":          Now,
-		"formatTime":   FormatTime,
-		"dateFormat":   DateFormat,
-		"humanizeTime": HumanizeTime,
+		"now":            Now,
+		"formatDateTime": FormatDateTime,
+		"formatDate":     FormatDate,
+		"dateFormat":     DateFormat,
+		"humanizeTime":   HumanizeTime,
 
 		// 集合处理（最常用）
 		"first":    First,
@@ -338,18 +339,24 @@ func Round(a any, precision int) float64 {
 //
 // 模板使用示例:
 // {{ now }} <!-- 输出: 当前时间对象 -->
-// {{ formatTime now "2006-01-02" }} <!-- 输出: 当前日期，如 "2023-05-20" -->
 func Now() time.Time {
 	return time.Now()
 }
 
-// FormatTime 格式化时间
+// FormatDateTime 格式化时间
 //
 // 模板使用示例:
-// {{ formatTime .CreateTime "2006-01-02 15:04:05" }} <!-- 输出: "2023-05-20 14:30:00" -->
-// {{ formatTime now "Jan 02, 2006" }} <!-- 输出: "May 20, 2023" -->
-func FormatTime(t time.Time, layout string) string {
-	return t.Format(layout)
+// {{ formatDateTime now }} <!-- 输出: "2023-05-20 14:30:00" -->
+func FormatDateTime(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05")
+}
+
+// FormatDate 格式化日期
+//
+// 模板使用示例:
+// {{ formatDate now }} <!-- 输出: "2023-05-20" -->
+func FormatDate(t time.Time) string {
+	return t.Format("2006-01-02")
 }
 
 // DateFormat 格式化日期时间
