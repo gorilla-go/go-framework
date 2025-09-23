@@ -173,14 +173,22 @@ func RenderBlock(templatePath, blockName string, data any) template.HTML {
 	var buf strings.Builder
 	tmpl, err := loadTemplate(templatePath)
 	if err != nil {
-		return template.HTML(fmt.Sprintf(`<div class="error">%s</div>`,
-			template.HTMLEscapeString(err.Error())))
+		return template.HTML(
+			fmt.Sprintf(
+				`<div class="error">%s</div>`,
+				template.HTMLEscapeString(err.Error()),
+			),
+		)
 	}
 
 	if block := tmpl.Lookup(blockName); block != nil {
 		if err := block.Execute(&buf, data); err != nil {
-			return template.HTML(fmt.Sprintf(`<div class="error">%s</div>`,
-				template.HTMLEscapeString(err.Error())))
+			return template.HTML(
+				fmt.Sprintf(
+					`<div class="error">%s</div>`,
+					template.HTMLEscapeString(err.Error()),
+				),
+			)
 		}
 		return template.HTML(buf.String())
 	}

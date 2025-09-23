@@ -32,6 +32,7 @@ func FuncMap() template.FuncMap {
 		"truncate":  Truncate,
 		"nl2br":     Nl2br,
 		"stripTags": StripTags,
+		"escape":    Escape,
 
 		// 数值处理（最常用）
 		"add":      Add,
@@ -147,6 +148,14 @@ func Nl2br(s string) template.HTML {
 		"<br>",
 		-1,
 	))
+}
+
+// Escape 转义HTML字符串
+//
+// 模板使用示例:
+// {{ escape "<p>这是<b>HTML</b>内容</p>" }} <!-- 输出: "&lt;p&gt;这是&lt;b&gt;HTML&lt;/b&gt;内容&lt;/p&gt;" -->
+func Escape(s string) string {
+	return template.HTMLEscapeString(s)
 }
 
 // StripTags 移除HTML标签
