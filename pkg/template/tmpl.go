@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"html/template"
 	"io"
 
@@ -25,16 +24,6 @@ func getManager() Manager {
 	return tmplManager
 }
 
-// loadTemplate 加载模板（向后兼容的包装函数）
-func loadTemplate(names ...string) (*template.Template, error) {
-	// 这个函数现在委托给管理器实现
-	// 由于接口限制，我们需要通过类型断言访问内部方法
-	if manager, ok := getManager().(*TemplateManager); ok {
-		return manager.loadTemplate(names...)
-	}
-	return nil, fmt.Errorf("无法访问模板管理器的内部方法")
-}
-
 // Render 渲染模板，支持可选布局参数
 func Render(w io.Writer, name string, data any, layout ...string) error {
 	return getManager().Render(w, name, data, layout...)
@@ -53,15 +42,6 @@ func RenderPartial(w io.Writer, name string, data any) error {
 // RenderWithoutLayout 渲染不带布局的模板（向后兼容）
 func RenderWithoutLayout(w io.Writer, name string, data any) error {
 	return getManager().RenderPartial(w, name, data)
-}
-
-// renderError 内部错误处理函数（向后兼容）
-func renderError(w io.Writer, err error) error {
-	// 这个函数现在由管理器内部处理
-	if manager, ok := getManager().(*TemplateManager); ok {
-		return manager.renderError(w, err)
-	}
-	return err
 }
 
 // ClearCache 清除模板缓存
