@@ -8,10 +8,24 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla-go/go-framework/pkg/router"
 )
+
+// 预编译的正则表达式，避免重复编译
+var (
+	htmlTagRegex *regexp.Regexp
+	regexOnce    sync.Once
+)
+
+// 初始化预编译的正则表达式
+func initRegex() {
+	regexOnce.Do(func() {
+		htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
+	})
+}
 
 // 最常用的模板函数集合
 // FuncMap 返回可用于HTML模板的函数映射
@@ -33,13 +47,13 @@ func FuncMap() template.FuncMap {
 		"nl2br":     Nl2br,
 		"stripTags": StripTags,
 
-		// 数值处理（最常用）
-		"add":      Add,
-		"subtract": Subtract,
-		"multiply": Multiply,
-		"divide":   Divide,
+		// 数值处理（最常用）- 使用优化版本
+		"add":      fastAdd,
+		"subtract": fastSubtract,
+		"multiply": fastMultiply,
+		"divide":   fastDivide,
 		"mod":      Mod,
-		"round":    Round,
+		"round":    fastRound,
 
 		// 日期时间处理（最常用）
 		"now":            Now,
@@ -48,13 +62,13 @@ func FuncMap() template.FuncMap {
 		"dateFormat":     DateFormat,
 		"humanizeTime":   HumanizeTime,
 
-		// 集合处理（最常用）
+		// 集合处理（最常用）- 使用优化版本
 		"first":    First,
 		"last":     Last,
-		"empty":    Empty,
-		"notEmpty": NotEmpty,
-		"length":   Length,
-		"inArray":  InArray,
+		"empty":    fastEmpty,
+		"notEmpty": func(a any) bool { return !fastEmpty(a) },
+		"length":   fastLength,
+		"inArray":  fastInArray,
 
 		// Map处理函数
 		"map":     NewMap,
@@ -155,8 +169,8 @@ func Nl2br(s string) template.HTML {
 // 模板使用示例:
 // {{ stripTags "<p>这是<b>HTML</b>内容</p>" }} <!-- 输出: "这是HTML内容" -->
 func StripTags(s string) string {
-	re := regexp.MustCompile("<[^>]*>")
-	return re.ReplaceAllString(s, "")
+	initRegex()
+	return htmlTagRegex.ReplaceAllString(s, "")
 }
 
 // ========== 数值处理函数 ==========

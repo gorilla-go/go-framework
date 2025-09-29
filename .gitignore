@@ -36,6 +36,7 @@ vendor/
 .Trashes
 ehthumbs.db
 Thumbs.db
+CLAUDE.md
 
 # 忽略air生成的临时文件
 .air.conf
