@@ -1,44 +1,90 @@
-# Air配置文件 (.air.toml)
-# 自动重载Go应用
+# Air 配置文件 (.air.toml) - 优化版
+# 自动重载Go应用，解决热重载时 exit code 1 的问题
 
 # 工作目录
-# 使用 . 或绝对路径，请注意 `tmp_dir` 目录必须在 `root` 目录下
 root = "."
 tmp_dir = "tmp"
 
 [build]
-# 只需要写你平常编译使用的shell命令。你也可以使用 `make`
-cmd = "go build -o ./tmp/main ./cmd/main.go"
-# 由`cmd`命令得到的二进制文件名
+# 编译命令 - 添加了更多编译选项
+cmd = "go build -ldflags='-s -w' -o ./tmp/main ./cmd/main.go"
+
+# 二进制文件名
 bin = "tmp/main"
-# 自定义执行程序的命令，可以添加额外的编译标识例如添加 GIN_MODE=release
+
+# 执行命令 - 优化版本，包含更好的信号处理
 full_bin = "./tmp/main"
-# 监听以下文件扩展名的文件.
-include_ext = ["go", "html", "yaml", "yml"]
-# 忽略这些文件扩展名或目录
-exclude_dir = ["tmp", ".git", "node_modules", "logs", "vendor", "static"]
-# 监听以下指定目录的文件
+
+# 预构建和后构建钩子
+pre_cmd = ["echo 'Starting build...'"]
+post_cmd = ["echo 'Build completed.'"]
+
+# 监听的文件扩展名
+include_ext = ["go", "html", "yaml", "yml", "toml"]
+
+# 忽略目录 - 添加了更多忽略项以减少不必要的重载
+exclude_dir = [
+    "tmp",
+    ".git",
+    "node_modules",
+    "logs",
+    "vendor",
+    "static/node_modules",
+    "static/dist",
+    ".idea",
+    ".vscode",
+    "bin"
+]
+
+# 监听目录
 include_dir = []
-# 排除以下文件
-exclude_file = []
-# 如果文件更改过于频繁，则没有必要在每次更改时都触发构建。可以设置触发构建的延迟时间
-delay = 2000 # ms
-# 发生构建错误时，停止运行旧的二进制文件。
-stop_on_error = true
-# air的日志文件名，该日志文件放置在你的`tmp_dir`中
+
+# 排除特定文件
+exclude_file = [
+    "*.log",
+    "*.pid",
+    "*.lock",
+    "*.tmp"
+]
+
+# 延迟时间 - 增加延迟以避免频繁重载
+delay = 3000 # ms (从2秒增加到3秒)
+
+# 构建错误时是否停止 - 改为 false 以提高稳定性
+stop_on_error = false
+
+# 发生构建错误时发送中断信号
+send_interrupt = true
+
+# 杀死延迟时间 - 给应用更多时间优雅关闭
+kill_delay = 2000 # ms
+
+# 重新运行延迟
+rerun_delay = 1000 # ms
+
+# air日志文件
 log = "air.log"
 
 [log]
 # 显示日志时间
 time = true
+# 显示主颜色
+main_only = false
 
 [color]
-# 自定义每个部分显示的颜色。如果找不到颜色，使用原始的应用输出。
+# 自定义颜色
 main = "magenta"
 watcher = "cyan"
 build = "yellow"
 runner = "green"
+app = "white"
 
 [misc]
-# 退出时删除tmp目录
-clean_on_exit = false
+# 退出时清理tmp目录
+clean_on_exit = true
+
+[screen]
+# 清屏
+clear_on_rebuild = true
+# 保留应用输出
+keep_scroll = false

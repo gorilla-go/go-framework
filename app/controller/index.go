@@ -27,6 +27,7 @@ func (i *IndexController) Index(ctx *gin.Context) {
 				"Description": "基于Gin的高性能路由系统，支持路由组、命名路由和路由参数",
 				"Example":     `rb.GET("/users/:id", controller.Get, "user@get")`,
 			},
+
 			{
 				"Name":        "依赖注入",
 				"Description": "基于Uber FX的依赖注入系统，自动管理组件生命周期",

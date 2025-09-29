@@ -1,21 +1,42 @@
 {
   "name": "go-framework-static",
   "version": "1.0.0",
-  "description": "静态资源处理",
+  "description": "静态资源处理 - 优化版",
   "main": "gulpfile.js",
   "scripts": {
-    "build": "gulp",
-    "watch": "gulp watch"
+    "build": "gulp build",
+    "build:prod": "gulp prod",
+    "watch": "gulp watch",
+    "dev": "gulp dev",
+    "clean": "gulp clean",
+    "info": "gulp info",
+    "stats": "gulp stats",
+    "help": "gulp help",
+    "test": "npm run build && npm run stats"
   },
   "devDependencies": {
     "chokidar": "^4.0.3",
     "del": "^6.0.0",
+    "glob": "^8.1.0",
     "gulp": "^4.0.2",
     "gulp-autoprefixer": "^8.0.0",
     "gulp-clean-css": "^4.3.0",
     "gulp-sass": "^5.1.0",
+    "gulp-sourcemaps": "^3.0.0",
     "gulp-uglify": "^3.0.2",
-    "gulp-watch": "^5.0.1",
     "sass": "^1.60.0"
-  }
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "keywords": [
+    "gulp",
+    "build",
+    "static",
+    "assets",
+    "go-framework"
+  ],
+  "author": "",
+  "license": "MIT"
 }

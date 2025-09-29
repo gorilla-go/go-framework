@@ -1,4 +1,4 @@
-.PHONY: all dev build run stop start start-d help clean install-deps gulp-build
+.PHONY: all dev build run stop start start-d help clean install gulp-build cleanup dev-clean
 
 # 默认目标
 all: dev
@@ -13,15 +13,29 @@ gulp-build:
 	@echo "构建静态资源..."
 	@cd static && npm run build
 
+# 清理开发环境（杀死孤儿进程）
+dev-clean:
+	@echo "🧹 清理开发环境..."
+	@./scripts/cleanup.sh
+
+# 清理并启动开发环境
+dev-safe: dev-clean dev
+
 # 开发模式（带热重载）
-dev: gulp-build 
-	@AIR_PATH=~/go/bin/air; \
+dev: gulp-build
+	@echo "🔍 检查端口占用情况..."
+	@if lsof -ti :8081 >/dev/null 2>&1; then \
+		echo "⚠️  端口 8081 被占用，请运行 'make dev-clean' 清理后重试"; \
+		echo "💡 或者直接运行 'make dev-safe' 自动清理并启动"; \
+		exit 1; \
+	fi; \
+	AIR_PATH=~/go/bin/air; \
 	if [ ! -f "$$AIR_PATH" ]; then \
 		echo "Air未安装, 正在安装..."; \
 		go install github.com/air-verse/air@latest; \
 	fi; \
 	export GIN_MODE=debug; \
-	echo "启动开发环境, 监控文件变更..."; \
+	echo "🚀 启动开发环境, 监控文件变更..."; \
 	(cd static && npm run watch &); \
 	$$AIR_PATH
 
@@ -70,24 +84,42 @@ stop:
 		fi; \
 	fi
 
-# 清理临时文件和日志
+# 清理临时文件和日志（不清理进程）
 clean:
 	@echo "清理临时文件..."
 	@rm -rf tmp/*
 	@rm -f .pid
 	@echo "清理完成"
 
+# 完整清理（包括进程）
+cleanup: dev-clean clean
+
 # 帮助
 help:
 	@echo "Go Framework 开发工具"
 	@echo ""
 	@echo "可用命令:"
-	@echo "  make dev         - 以开发模式运行 (带热重载)"
-	@echo "  make build       - 构建应用程序"
-	@echo "  make run         - 运行应用程序 (不带热重载)"
-	@echo "  make start       - 构建并在前台启动生产服务"
-	@echo "  make start-d     - 构建并在后台启动生产服务"
-	@echo "  make stop        - 停止运行的应用程序"
-	@echo "  make clean       - 清理临时文件和进程"
-	@echo "  make install - 安装前端依赖"
-	@echo "  make gulp-build  - 构建静态资源" 
+	@echo "  🚀 开发相关:"
+	@echo "    make dev         - 以开发模式运行 (带热重载)"
+	@echo "    make dev-safe    - 清理并启动开发环境 (推荐)"
+	@echo "    make dev-clean   - 清理孤儿进程"
+	@echo ""
+	@echo "  🏗️  构建相关:"
+	@echo "    make build       - 构建应用程序"
+	@echo "    make run         - 运行应用程序 (不带热重载)"
+	@echo "    make install     - 安装前端依赖"
+	@echo "    make gulp-build  - 构建静态资源"
+	@echo ""
+	@echo "  🔧 生产环境:"
+	@echo "    make start       - 构建并在前台启动生产服务"
+	@echo "    make start-d     - 构建并在后台启动生产服务"
+	@echo "    make stop        - 停止运行的应用程序"
+	@echo ""
+	@echo "  🧹 清理相关:"
+	@echo "    make clean       - 清理临时文件"
+	@echo "    make cleanup     - 完整清理 (文件+进程)"
+	@echo ""
+	@echo "  💡 推荐流程:"
+	@echo "    1. 开发时: make dev-safe"
+	@echo "    2. 遇到端口冲突: make dev-clean"
+	@echo "    3. Ctrl+C 退出后: make dev-clean (清理孤儿进程)"
