@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,39 @@ var (
 	httpServer *http.Server
 )
 
+// printStartupBanner 打印启动 Logo 和服务信息
+func printStartupBanner(cfg *config.Config) {
+	banner := `
+   ____           _____                                        __
+  / ___| ___     |  ___| __ __ _ _ __ ___   _____      _____ _ __ | | __
+ | |  _ / _ \    | |_ | '__/ _' | '_ ' _ \ / _ \ \ /\ / / _ \ '__|| |/ /
+ | |_| | (_) |   |  _|| | | (_| | | | | | |  __/\ V  V / (_) | |   |   <
+  \____|\___/    |_|  |_|  \__,_|_| |_| |_|\___| \_/\_/ \___/|_|   |_|\_\
+`
+	// ANSI 颜色代码
+	const (
+		colorReset  = "\033[0m"
+		colorCyan   = "\033[36m"
+		colorGreen  = "\033[32m"
+		colorYellow = "\033[33m"
+		colorBlue   = "\033[34m"
+		colorPurple = "\033[35m"
+		colorBold   = "\033[1m"
+	)
+
+	fmt.Println(colorCyan + banner + colorReset)
+	fmt.Printf("%s%s🚀 Server is running!%s\n\n", colorBold, colorGreen, colorReset)
+	fmt.Printf("  %s➜%s Local:    %shttp://0.0.0.0:%d%s\n", colorGreen, colorReset, colorCyan, cfg.Server.Port, colorReset)
+	fmt.Printf("  %s➜%s Mode:     %s%s%s\n", colorGreen, colorReset, colorYellow, cfg.Server.Mode, colorReset)
+	fmt.Printf("  %s➜%s PID:      %s%d%s\n\n", colorGreen, colorReset, colorBlue, os.Getpid(), colorReset)
+
+	if cfg.Server.EnableRateLimit {
+		fmt.Printf("  %s⚡ Rate Limit:%s %d req/s (burst: %d)\n", colorPurple, colorReset, cfg.Server.RateLimit, cfg.Server.RateBurst)
+	}
+
+	fmt.Printf("\n  %sPress Ctrl+C to stop%s\n\n", colorYellow, colorReset)
+}
+
 // RegisterHooks 注册应用程序钩子
 func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config) {
 	lifecycle.Append(fx.Hook{
@@ -46,13 +80,13 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 			}
 
 			go func() {
-				logger.Infof("HTTP服务器启动在端口: %d", cfg.Server.Port)
 				if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					logger.Fatalf("HTTP服务器启动失败: %v", err)
 				}
 			}()
 
-			logger.Info("服务器已准备就绪")
+			// 打印启动 Logo
+			printStartupBanner(cfg)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

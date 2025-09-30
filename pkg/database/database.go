@@ -11,7 +11,7 @@ import (
 )
 
 // InitDB 初始化数据库连接
-func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+func Init(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	// 构建DSN
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.Username,

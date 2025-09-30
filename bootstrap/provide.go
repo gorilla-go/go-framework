@@ -23,7 +23,7 @@ func Config() *config.Config {
 
 // 提供数据库连接
 func Database(cfg *config.Config) *gorm.DB {
-	db, err := database.InitDB(&cfg.Database)
+	db, err := database.Init(&cfg.Database)
 	if err != nil {
 		logger.Fatalf("初始化数据库失败: %v", err)
 	}

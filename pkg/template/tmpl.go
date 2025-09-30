@@ -39,11 +39,6 @@ func RenderPartial(w io.Writer, name string, data any) error {
 	return getManager().RenderPartial(w, name, data)
 }
 
-// RenderWithoutLayout 渲染不带布局的模板（向后兼容）
-func RenderWithoutLayout(w io.Writer, name string, data any) error {
-	return getManager().RenderPartial(w, name, data)
-}
-
 // ClearCache 清除模板缓存
 func ClearCache() {
 	getManager().ClearCache()
