@@ -10,13 +10,13 @@ import (
 
 // Response 统一响应结构
 type Response struct {
-	Code    int         `json:"code"`    // 错误码
-	Message string      `json:"message"` // 响应消息
-	Data    interface{} `json:"data"`    // 响应数据
+	Code    int    `json:"code"`    // 错误码
+	Message string `json:"message"` // 响应消息
+	Data    any    `json:"data"`    // 响应数据
 }
 
 // Success 成功响应
-func Success(c *gin.Context, data interface{}) {
+func Success(c *gin.Context, data any) {
 	resp := Response{
 		Code:    errors.Success,
 		Message: "成功",
@@ -26,7 +26,7 @@ func Success(c *gin.Context, data interface{}) {
 }
 
 // SuccessWithDetail 带详细信息的成功响应
-func SuccessWithDetail(c *gin.Context, detail string, data interface{}) {
+func SuccessWithDetail(c *gin.Context, detail string, data any) {
 	resp := Response{
 		Code:    errors.Success,
 		Message: detail,
@@ -57,39 +57,4 @@ func Fail(c *gin.Context, err error) {
 	// 返回响应
 	c.JSON(appErr.HTTPStatus(), resp)
 	c.Abort()
-}
-
-// BadRequest 无效请求响应
-func BadRequest(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewBadRequest(detail, err))
-}
-
-// Unauthorized 未授权响应
-func Unauthorized(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewUnauthorized(detail, err))
-}
-
-// Forbidden 拒绝访问响应
-func Forbidden(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewForbidden(detail, err))
-}
-
-// NotFound 资源不存在响应
-func NotFound(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewNotFound(detail, err))
-}
-
-// InternalServerError 服务器内部错误响应
-func InternalServerError(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewInternalServerError(detail, err))
-}
-
-// ValidationError 验证错误响应
-func ValidationError(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewValidationError(detail, err))
-}
-
-// DatabaseError 数据库错误响应
-func DatabaseError(c *gin.Context, detail string, err error) {
-	Fail(c, errors.NewDatabaseError(detail, err))
 }
