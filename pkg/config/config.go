@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 
 	"github.com/spf13/viper"
 )
@@ -112,33 +114,54 @@ type SessionConfig struct {
 	SameSite string `mapstructure:"same_site"`
 }
 
-// LoadConfig 从文件加载配置
-func LoadConfig(configPath string) (*Config, error) {
-	v := viper.New()
+const defaultCfg = "config/config.yaml"
 
-	// 设置默认配置文件路径
-	if configPath == "" {
-		configPath = "config/config.yaml"
-	}
+var (
+	globalConfig *Config
+	configOnce   sync.Once
+	configErr    error
+)
 
-	// 检查配置文件是否存在
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("config file not found: %s", configPath)
-	}
+// Init 从文件加载配置
+func GetConfig() (*Config, error) {
+	configOnce.Do(func() {
+		v := viper.New()
 
-	// 设置配置文件路径
-	v.SetConfigFile(configPath)
+		// 检查配置文件是否存在
+		if _, err := os.Stat(defaultCfg); os.IsNotExist(err) {
+			configErr = fmt.Errorf("配置文件不存在: %s", defaultCfg)
+			return
+		}
 
-	// 尝试读取配置文件
-	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
+		// 设置配置文件路径
+		v.SetConfigFile(defaultCfg)
 
-	// 解析配置到结构体
-	config := &Config{}
-	if err := v.Unmarshal(config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	}
+		// 启用环境变量自动绑定（环境变量优先于配置文件）
+		v.AutomaticEnv()
+		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	return config, nil
+		// 兼容 GIN_MODE 环境变量（Gin 框架的标准环境变量）
+		v.BindEnv("server.mode", "GIN_MODE")
+
+		// 尝试读取配置文件
+		if err := v.ReadInConfig(); err != nil {
+			configErr = fmt.Errorf("读取配置文件失败: %w", err)
+			return
+		}
+
+		// 解析配置到结构体
+		config := &Config{}
+		if err := v.Unmarshal(config); err != nil {
+			configErr = fmt.Errorf("解析配置文件失败: %w", err)
+			return
+		}
+
+		globalConfig = config
+	})
+
+	return globalConfig, configErr
+}
+
+func (c *Config) IsDebug() bool {
+	return c.Server.Mode == "debug"
 }

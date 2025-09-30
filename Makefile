@@ -40,7 +40,7 @@ dev: gulp-build
 	$$AIR_PATH
 
 # 生产环境构建
-build: install-deps gulp-build
+build: install gulp-build
 	@mkdir -p bin
 	go build -ldflags="-s -w" -o bin/app ./cmd/main.go
 
@@ -49,15 +49,15 @@ run:
 	go run ./cmd/main.go
 
 # 前台启动
-start: build stop
+start: build
 	@echo "前台启动应用程序..."
-	@bin/app
+	@export GIN_MODE=release; bin/app
 
 # 后台启动
-start-d: build stop
+start-d: build
 	@echo "后台启动应用程序..."
 	@mkdir -p logs
-	@nohup bin/app > logs/app.out 2>&1 & echo $$! > .pid
+	@export GIN_MODE=release; nohup bin/app > logs/app.out 2>&1 & echo $$! > .pid
 	@echo "应用程序已在后台启动, PID: $$(cat .pid)"
 
 # 生产环境停止

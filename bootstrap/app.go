@@ -19,6 +19,15 @@ const (
 	ShutdownTimeout = 15 * time.Second
 )
 
+// 全局注册器
+var Providers = []any{
+	Config,
+	EventBus,
+	Database,
+	Controllers,
+	Router,
+}
+
 // 全局HTTP服务器实例，便于在信号处理中访问
 var (
 	httpServer *http.Server
@@ -69,15 +78,11 @@ func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Confi
 
 // NewApp 创建应用程序
 func NewApp() *fx.App {
-	app := fx.New(
+
+	// 根据运行模式设置 FX 选项
+	fxOptions := []fx.Option{
 		// 注册所有模块
-		fx.Provide([]any{
-			Config,
-			EventBus,
-			Database,
-			Controllers,
-			Router,
-		}...),
+		fx.Provide(Providers...),
 
 		// 初始化
 		fx.Invoke(func(cfg *config.Config) {
@@ -85,7 +90,7 @@ func NewApp() *fx.App {
 			logger.InitLogger(&cfg.Log)
 
 			// 初始化模板引擎
-			template.InitTemplateManager(cfg.Template, cfg.Server.Mode == "debug")
+			template.InitTemplateManager(cfg.Template, Config().IsDebug())
 		}),
 
 		// 控制器初始化
@@ -93,7 +98,12 @@ func NewApp() *fx.App {
 
 		// 注册钩子
 		fx.Invoke(RegisterHooks),
-	)
+	}
 
-	return app
+	// 根据运行模式设置日志级别
+	if !Config().IsDebug() {
+		fxOptions = append(fxOptions, fx.NopLogger)
+	}
+
+	return fx.New(fxOptions...)
 }

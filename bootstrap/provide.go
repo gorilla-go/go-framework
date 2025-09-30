@@ -14,7 +14,7 @@ import (
 
 // 全局配置
 func Config() *config.Config {
-	cfg, err := config.LoadConfig("")
+	cfg, err := config.GetConfig()
 	if err != nil {
 		logger.Fatalf("加载配置失败: %v", err)
 	}

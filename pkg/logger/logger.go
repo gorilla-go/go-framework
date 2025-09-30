@@ -32,7 +32,7 @@ func InitLogger(cfg *config.LogConfig) error {
 	// 创建日志目录
 	logDir := filepath.Dir(cfg.Filename)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return fmt.Errorf("failed to create log directory: %w", err)
+		return fmt.Errorf("创建日志目录失败: %w", err)
 	}
 
 	// 初始化zap
@@ -90,7 +90,7 @@ func initZap(cfg *config.LogConfig) error {
 	// 创建日志文件
 	logFile, err := os.OpenFile(cfg.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to open log file: %w", err)
+		return fmt.Errorf("打开日志文件失败: %w", err)
 	}
 
 	// 创建Core，只输出到文件
@@ -109,62 +109,62 @@ func initZap(cfg *config.LogConfig) error {
 }
 
 // Debug 记录debug级别日志
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	SugarLogger.Debug(args...)
 }
 
 // Debugf 记录debug级别日志（格式化）
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	SugarLogger.Debugf(format, args...)
 }
 
 // Info 记录info级别日志
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	SugarLogger.Info(args...)
 }
 
 // Infof 记录info级别日志（格式化）
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	SugarLogger.Infof(format, args...)
 }
 
 // Warn 记录warn级别日志
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	SugarLogger.Warn(args...)
 }
 
 // Warnf 记录warn级别日志（格式化）
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	SugarLogger.Warnf(format, args...)
 }
 
 // Error 记录error级别日志
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	SugarLogger.Error(args...)
 }
 
 // Errorf 记录error级别日志（格式化）
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	SugarLogger.Errorf(format, args...)
 }
 
 // Fatal 记录fatal级别日志
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	SugarLogger.Fatal(args...)
 }
 
 // Fatalf 记录fatal级别日志（格式化）
-func Fatalf(format string, args ...interface{}) {
+func Fatalf(format string, args ...any) {
 	SugarLogger.Fatalf(format, args...)
 }
 
 // Panic 记录panic级别日志
-func Panic(args ...interface{}) {
+func Panic(args ...any) {
 	SugarLogger.Panic(args...)
 }
 
 // Panicf 记录panic级别日志（格式化）
-func Panicf(format string, args ...interface{}) {
+func Panicf(format string, args ...any) {
 	SugarLogger.Panicf(format, args...)
 }
 
