@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/errors"
 	"github.com/gorilla-go/go-framework/pkg/logger"
+	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 // RecoveryMiddleware 恢复中间件
@@ -20,11 +21,9 @@ func RecoveryMiddleware() gin.HandlerFunc {
 				errMsg := fmt.Sprintf("panic recovered: %v", r)
 				logger.Errorf("%s\n%s", errMsg, string(stack))
 
-				// 创建内部服务器错误
+				// 创建内部服务器错误并返回响应
 				appErr := errors.NewInternalServerError("服务器内部错误", fmt.Errorf("%v", r))
-
-				// 使用通用错误处理函数
-				HandleAppError(c, appErr)
+				response.Fail(c, appErr)
 			}
 		}()
 

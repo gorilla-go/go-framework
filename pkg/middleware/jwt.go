@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla-go/go-framework/pkg/config"
+	pkgErrors "github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 // JWTClaims JWT声明
@@ -86,21 +88,21 @@ func JWTMiddleware(cfg *config.JWTConfig) gin.HandlerFunc {
 		// 从请求头获取token
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			HandleUnauthorized(c, "未提供认证信息", errors.New("缺少Authorization头"))
+			response.Fail(c, pkgErrors.NewUnauthorized("未提供认证信息", errors.New("缺少Authorization头")))
 			return
 		}
 
 		// 检查格式
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			HandleUnauthorized(c, "认证格式错误", errors.New("无效的Authorization格式"))
+			response.Fail(c, pkgErrors.NewUnauthorized("认证格式错误", errors.New("无效的Authorization格式")))
 			return
 		}
 
 		// 解析令牌
 		claims, err := ParseToken(parts[1], cfg)
 		if err != nil {
-			HandleUnauthorized(c, "无效的认证信息", err)
+			response.Fail(c, pkgErrors.NewUnauthorized("无效的认证信息", err))
 			return
 		}
 
@@ -120,7 +122,7 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 		// 获取用户角色
 		role, exists := c.Get("role")
 		if !exists {
-			HandleUnauthorized(c, "未认证", errors.New("用户未认证"))
+			response.Fail(c, pkgErrors.NewUnauthorized("未认证", errors.New("用户未认证")))
 			return
 		}
 
@@ -135,8 +137,7 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 		}
 
 		if !hasRole {
-			// 使用通用错误处理
-			HandleUnauthorized(c, "权限不足", errors.New("用户没有所需角色"))
+			response.Fail(c, pkgErrors.NewForbidden("权限不足", errors.New("用户没有所需角色")))
 			return
 		}
 

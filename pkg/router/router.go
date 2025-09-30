@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/errors"
 	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/middleware"
+	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 type Router struct {
@@ -68,7 +69,7 @@ func (router *Router) Route() *gin.Engine {
 
 	// 404处理
 	r.NoRoute(func(c *gin.Context) {
-		middleware.HandleNotFound(c, errors.ErrMsg[errors.NotFound], nil)
+		response.Fail(c, errors.NewNotFound("", nil))
 	})
 
 	return r

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 // RateLimiter 限流器
@@ -68,8 +70,7 @@ func RateLimitMiddleware(rate int, capacity int) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		if !limiter.Allow() {
-			// 使用通用错误处理
-			HandleTooManyRequests(c, "请求过于频繁，请稍后再试", stderrors.New("请求限流"))
+			response.Fail(c, errors.New(errors.TooManyRequests, "请求过于频繁，请稍后再试", stderrors.New("请求限流")))
 			return
 		}
 
@@ -94,8 +95,7 @@ func IPRateLimitMiddleware(rate int, capacity int) gin.HandlerFunc {
 		mu.Unlock()
 
 		if !limiter.Allow() {
-			// 使用通用错误处理
-			HandleTooManyRequests(c, "请求过于频繁，请稍后再试", stderrors.New("IP请求限流"))
+			response.Fail(c, errors.New(errors.TooManyRequests, "请求过于频繁，请稍后再试", stderrors.New("IP请求限流")))
 			return
 		}
 
