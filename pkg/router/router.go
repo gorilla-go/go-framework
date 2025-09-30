@@ -11,6 +11,7 @@ import (
 type Router struct {
 	Controllers []IController
 	Cfg         *config.Config
+	Middlewares []gin.HandlerFunc
 }
 
 // Route 设置路由
@@ -38,6 +39,11 @@ func (router *Router) Route() *gin.Engine {
 			&router.Cfg.Redis,
 		),
 	)
+
+	// 添加自定义中间件
+	if len(router.Middlewares) > 0 {
+		r.Use(router.Middlewares...)
+	}
 
 	// 根据配置启用 gzip 压缩
 	if cfg.Gzip.Enabled {

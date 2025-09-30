@@ -53,7 +53,7 @@ router.Use(middleware.Recovery())`,
 			{
 				"Name":        "配置管理",
 				"Description": "基于YAML的配置系统，支持环境变量覆盖",
-				"Example": `config := config.GetConfig()
+				"Example": `config := config.Fetch()
 port := config.Server.Port`,
 			},
 			{

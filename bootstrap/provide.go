@@ -18,12 +18,13 @@ var Providers = []any{
 	EventBus,
 	Database,
 	Controllers,
+	Middlewares,
 	Router,
 }
 
 // 全局配置
 func Config() *config.Config {
-	cfg, err := config.GetConfig()
+	cfg, err := config.Fetch()
 	if err != nil {
 		logger.Fatalf("加载配置失败: %v", err)
 	}
@@ -39,11 +40,16 @@ func Database(cfg *config.Config) *gorm.DB {
 	return db
 }
 
+func Middlewares() []gin.HandlerFunc {
+	return []gin.HandlerFunc{}
+}
+
 // 提供路由器
-func Router(controllers []router.IController, cfg *config.Config) *gin.Engine {
+func Router(controllers []router.IController, cfg *config.Config, middlewares []gin.HandlerFunc) *gin.Engine {
 	router := &router.Router{
 		Controllers: controllers,
 		Cfg:         cfg,
+		Middlewares: middlewares,
 	}
 	return router.Route()
 }

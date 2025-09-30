@@ -128,7 +128,7 @@ func (h *HelloController) Hello(c *gin.Context) {
 ```go
 // bootstrap/provide.go
 func Database() *gorm.DB {
-    cfg, _ := config.GetConfig()
+    cfg, _ := config.Fetch()
     db, _ := database.NewDatabase(&cfg.Database)
     return db
 }

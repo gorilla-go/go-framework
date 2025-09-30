@@ -123,7 +123,7 @@ var (
 )
 
 // Init 从文件加载配置
-func GetConfig() (*Config, error) {
+func Fetch() (*Config, error) {
 	configOnce.Do(func() {
 		v := viper.New()
 
