@@ -10,8 +10,9 @@ import (
 
 // RouteBuilder 路由构建器
 type RouteBuilder struct {
-	router *gin.Engine
-	group  *gin.RouterGroup
+	router   *gin.Engine
+	group    *gin.RouterGroup
+	basePath string
 }
 
 type RouterAnnotation interface {
@@ -42,9 +43,19 @@ func NewRouteBuilder(router *gin.Engine) *RouteBuilder {
 
 // Group 创建路由组
 func (rb *RouteBuilder) Group(path string) *RouteBuilder {
+	var group *gin.RouterGroup
+	newBasePath := rb.basePath + path
+
+	if rb.group != nil {
+		group = rb.group.Group(path)
+	} else {
+		group = rb.router.Group(path)
+	}
+
 	return &RouteBuilder{
-		router: rb.router,
-		group:  rb.router.Group(path),
+		router:   rb.router,
+		group:    group,
+		basePath: newBasePath,
 	}
 }
 
@@ -74,62 +85,44 @@ func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.Han
 		name = fmt.Sprintf("%s:%s", method, path)
 	}
 
-	// HTTP方法到Gin方法的映射
-	methodHandlers := map[string]func(string, ...gin.HandlerFunc) gin.IRoutes{
-		"GET":     rb.router.GET,
-		"POST":    rb.router.POST,
-		"PUT":     rb.router.PUT,
-		"DELETE":  rb.router.DELETE,
-		"PATCH":   rb.router.PATCH,
-		"HEAD":    rb.router.HEAD,
-		"OPTIONS": rb.router.OPTIONS,
-	}
-
-	if handlerFunc, exists := methodHandlers[method]; exists {
-		if rb.group != nil {
-			// 使用路由组的方法映射
-			groupHandlers := map[string]func(string, ...gin.HandlerFunc) gin.IRoutes{
-				"GET":     rb.group.GET,
-				"POST":    rb.group.POST,
-				"PUT":     rb.group.PUT,
-				"DELETE":  rb.group.DELETE,
-				"PATCH":   rb.group.PATCH,
-				"HEAD":    rb.group.HEAD,
-				"OPTIONS": rb.group.OPTIONS,
-			}
-			groupHandlers[method](path, handler)
-		} else {
-			handlerFunc(path, handler)
-		}
+	// 注册到Gin
+	target := rb.getRouteTarget()
+	switch method {
+	case "GET":
+		target.GET(path, handler)
+	case "POST":
+		target.POST(path, handler)
+	case "PUT":
+		target.PUT(path, handler)
+	case "DELETE":
+		target.DELETE(path, handler)
+	case "PATCH":
+		target.PATCH(path, handler)
+	case "HEAD":
+		target.HEAD(path, handler)
+	case "OPTIONS":
+		target.OPTIONS(path, handler)
 	}
 
 	// 记录路由信息
+	fullPath := rb.basePath + path
+
 	routesMutex.Lock()
-	defer routesMutex.Unlock()
-
-	fullPath := path
-	if rb.group != nil {
-		// 获取路由组的基础路径
-		fullPath = rb.getGroupBasePath() + path
-	}
-
 	routes[name] = &Route{
 		Name:    name,
 		Path:    fullPath,
 		Method:  method,
 		Handler: handler,
 	}
+	routesMutex.Unlock()
 }
 
-// 获取路由组的基础路径
-func (rb *RouteBuilder) getGroupBasePath() string {
-	if rb.group == nil {
-		return ""
+// getRouteTarget 获取路由注册目标（路由组或根路由）
+func (rb *RouteBuilder) getRouteTarget() gin.IRoutes {
+	if rb.group != nil {
+		return rb.group
 	}
-	// Gin路由组的基础路径需要从路由组对象中提取
-	// 这里使用一个简单的方法来获取基础路径
-	// 实际可能需要更复杂的逻辑来获取完整路径
-	return "/"
+	return rb.router
 }
 
 // PATCH 注册PATCH请求路由
@@ -149,28 +142,25 @@ func (rb *RouteBuilder) OPTIONS(path string, handler gin.HandlerFunc, name strin
 
 // ANY 注册所有HTTP方法路由
 func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
-	// 注册到gin
-	if rb.group != nil {
-		rb.group.Any(path, handler)
-	} else {
-		rb.router.Any(path, handler)
+	if name == "" {
+		name = fmt.Sprintf("ANY:%s", path)
 	}
+
+	// 注册到gin
+	target := rb.getRouteTarget()
+	target.Any(path, handler)
 
 	// 记录路由信息
+	fullPath := rb.basePath + path
+
 	routesMutex.Lock()
-	defer routesMutex.Unlock()
-
-	fullPath := path
-	if rb.group != nil {
-		fullPath = rb.getGroupBasePath() + path
-	}
-
 	routes[name] = &Route{
 		Name:    name,
 		Path:    fullPath,
 		Method:  "ANY",
 		Handler: handler,
 	}
+	routesMutex.Unlock()
 }
 
 // BuildUrl 根据路由名称和参数生成URL
@@ -184,13 +174,31 @@ func BuildUrl(name string, params ...map[string]any) (string, error) {
 	}
 
 	path := route.Path
+	missingParams := []string{}
 
+	// 替换路径参数
 	if len(params) > 0 {
 		for key, value := range params[0] {
 			paramPlaceholder := ":" + key
-			strValue := fmt.Sprintf("%v", value)
-			path = strings.ReplaceAll(path, paramPlaceholder, strValue)
+			if strings.Contains(path, paramPlaceholder) {
+				strValue := fmt.Sprintf("%v", value)
+				path = strings.ReplaceAll(path, paramPlaceholder, strValue)
+			}
 		}
+	}
+
+	// 检查是否还有未替换的参数
+	if strings.Contains(path, ":") {
+		parts := strings.Split(path, "/")
+		for _, part := range parts {
+			if strings.HasPrefix(part, ":") {
+				missingParams = append(missingParams, strings.TrimPrefix(part, ":"))
+			}
+		}
+	}
+
+	if len(missingParams) > 0 {
+		return "", fmt.Errorf("缺少路径参数: %s", strings.Join(missingParams, ", "))
 	}
 
 	return path, nil

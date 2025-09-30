@@ -1,7 +1,7 @@
 .PHONY: all dev build run stop start start-d help clean install gulp-build
 
 # 默认目标
-all: dev
+all: dev-safe
 
 # 安装依赖
 install:
