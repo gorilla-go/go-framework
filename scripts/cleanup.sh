@@ -11,8 +11,13 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 默认端口
-PORT=${1:-8081}
+# 获取端口：优先使用参数，其次从配置文件读取
+if [ -n "$1" ]; then
+    PORT=$1
+else
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PORT=$("$SCRIPT_DIR/get-port.sh")
+fi
 
 echo -e "${BLUE}🧹 开始清理开发环境...${NC}"
 

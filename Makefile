@@ -19,9 +19,10 @@ dev-safe: clean dev
 
 # 开发模式（带热重载）
 dev: gulp-build
-	@echo "🔍 检查端口占用情况..."
-	@if lsof -ti :8081 >/dev/null 2>&1; then \
-		echo "⚠️  端口 8081 被占用，请运行 'make clean' 清理后重试"; \
+	@PORT=$$(./scripts/get-port.sh); \
+	echo "🔍 检查端口 $$PORT 占用情况..."; \
+	if lsof -ti :$$PORT >/dev/null 2>&1; then \
+		echo "⚠️  端口 $$PORT 被占用，请运行 'make clean' 清理后重试"; \
 		echo "💡 或者直接运行 'make dev-safe' 自动清理并启动"; \
 		exit 1; \
 	fi; \
@@ -31,7 +32,7 @@ dev: gulp-build
 		go install github.com/air-verse/air@latest; \
 	fi; \
 	export GIN_MODE=debug; \
-	echo "🚀 启动开发环境, 监控文件变更..."; \
+	echo "🚀 启动开发环境 (端口: $$PORT), 监控文件变更..."; \
 	(cd static && npm run watch &); \
 	$$AIR_PATH
 
