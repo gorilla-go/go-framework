@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -195,6 +196,9 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...
 		return tm.renderError(w, err)
 	}
 
+	// 在渲染前设置 Content-Type（如果 w 是 http.ResponseWriter 且未设置）
+	tm.ensureContentType(w)
+
 	// 执行模板渲染
 	if err := tmpl.Execute(w, data); err != nil {
 		return tm.renderError(w, NewRenderError(name, err))
@@ -205,6 +209,25 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...
 // RenderWithDefaultLayout 使用默认布局渲染模板
 func (tm *TemplateManager) RenderWithDefaultLayout(w io.Writer, name string, data any) error {
 	return tm.Render(w, name, data, tm.defaultLayout)
+}
+
+// ensureContentType 确保设置了 Content-Type（仅对 http.ResponseWriter 有效）
+func (tm *TemplateManager) ensureContentType(w io.Writer) {
+	// 尝试将 w 转换为 http.ResponseWriter
+	type headerWriter interface {
+		Header() http.Header
+		WriteHeader(int)
+	}
+
+	if hw, ok := w.(headerWriter); ok {
+		// 检查是否已设置 Content-Type
+		if hw.Header().Get("Content-Type") == "" {
+			// 设置默认的 HTML Content-Type
+			hw.Header().Set("Content-Type", "text/html; charset=utf-8")
+			// 设置状态码（如果尚未设置）
+			hw.WriteHeader(http.StatusOK)
+		}
+	}
 }
 
 // RenderPartial 渲染部分模板（不使用布局）

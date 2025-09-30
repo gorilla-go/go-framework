@@ -131,5 +131,6 @@ func (c *Controller) Show(ctx *gin.Context) {
 	}
 
 	// 使用模板引擎渲染模板
+	// 注意：模板管理器会自动设置 Content-Type 和状态码
 	template.RenderWithDefaultLayout(ctx.Writer, "index", data)
 }
