@@ -122,16 +122,6 @@ func (g *gzipWriter) Written() bool {
 	return g.written
 }
 
-// reset 重置 gzipWriter 状态
-func (g *gzipWriter) reset(w gin.ResponseWriter) {
-	g.ResponseWriter = w
-	g.writer.Reset(w)
-	g.written = false
-	g.size = 0
-	g.shouldCompr = false
-	g.compressing = false
-}
-
 // gzipWriterPool gzip writer 对象池
 var gzipWriterPool = sync.Pool{
 	New: func() interface{} {
