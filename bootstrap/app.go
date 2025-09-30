@@ -20,15 +20,6 @@ const (
 	ShutdownTimeout = 15 * time.Second
 )
 
-// 全局注册器
-var Providers = []any{
-	Config,
-	EventBus,
-	Database,
-	Controllers,
-	Router,
-}
-
 // 全局HTTP服务器实例，便于在信号处理中访问
 var (
 	httpServer *http.Server

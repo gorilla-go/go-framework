@@ -12,6 +12,15 @@ import (
 	_ "github.com/gorilla-go/go-framework/routes"
 )
 
+// 全局注册器
+var Providers = []any{
+	Config,
+	EventBus,
+	Database,
+	Controllers,
+	Router,
+}
+
 // 全局配置
 func Config() *config.Config {
 	cfg, err := config.GetConfig()
