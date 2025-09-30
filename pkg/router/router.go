@@ -38,6 +38,7 @@ func (router *Router) Route() *gin.Engine {
 		middleware.SessionMiddleware(
 			&router.Cfg.Session,
 			&router.Cfg.Redis,
+			logger.GetLogger(),
 		),
 	)
 

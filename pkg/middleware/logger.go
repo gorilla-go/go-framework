@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"time"
 
@@ -79,13 +80,38 @@ func LoggerMiddleware() gin.HandlerFunc {
 			}
 		}
 
+		logMsg := "[ REQUEST ] " + c.Request.Method + " " + c.Request.URL.Path
+		if c.Request.URL.RawQuery != "" {
+			logMsg += "?" + c.Request.URL.RawQuery
+		}
+		logMsg += "\n"
+		logMsg += "[ IP      ] " + c.ClientIP() + "\n"
+		logMsg += fmt.Sprintf("[ STATUS  ] %d\n", c.Writer.Status())
+		logMsg += "[ RUNTIME ] " + latency.String() + "\n"
+
+		if len(requestBody) > 0 {
+			bodyStr := string(requestBody)
+			if len(bodyStr) > 500 {
+				bodyStr = bodyStr[:500] + "..."
+			}
+			logMsg += "[ BODY    ] " + bodyStr + "\n"
+		}
+
+		if writer.body.Len() > 0 {
+			responseStr := writer.body.String()
+			if len(responseStr) > 500 {
+				responseStr = responseStr[:500] + "..."
+			}
+			logMsg += "[ RESPONSE] " + responseStr + "\n"
+		}
+
 		// 根据状态码记录不同级别的日志
 		if c.Writer.Status() >= 500 {
-			logger.Errorf("请求异常: %v", requestInfo)
+			logger.Error(logMsg)
 		} else if c.Writer.Status() >= 400 {
-			logger.Warnf("请求警告: %v", requestInfo)
+			logger.Warn(logMsg)
 		} else {
-			logger.Infof("请求正常: %v", requestInfo)
+			logger.Info(logMsg)
 		}
 	}
 }
