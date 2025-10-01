@@ -52,7 +52,7 @@ func NewTemplateManager(cfg config.TemplateConfig, isDevelopment bool) *Template
 		extension:       cfg.Extension,
 		templates:       make(map[string]*template.Template),
 		funcMap:         FuncMap(),
-		defaultLayout:   "main",
+		defaultLayout:   cfg.DefaultLayout,
 		developmentMode: isDevelopment,
 		loadStats:       make(map[string]int64),
 	}

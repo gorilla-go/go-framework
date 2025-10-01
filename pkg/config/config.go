@@ -76,9 +76,10 @@ type JWTConfig struct {
 
 // TemplateConfig 模板配置
 type TemplateConfig struct {
-	Path      string `mapstructure:"path"`
-	Layouts   string `mapstructure:"layouts"`
-	Extension string `mapstructure:"extension"`
+	Path          string `mapstructure:"path"`
+	Layouts       string `mapstructure:"layouts"`
+	Extension     string `mapstructure:"extension"`
+	DefaultLayout string `mapstructure:"default_layout"`
 }
 
 // StaticConfig 静态文件配置
