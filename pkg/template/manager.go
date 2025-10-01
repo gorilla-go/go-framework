@@ -48,7 +48,7 @@ var (
 func NewTemplateManager(cfg config.TemplateConfig, isDevelopment bool) *TemplateManager {
 	return &TemplateManager{
 		templatesDir:    cfg.Path,
-		layoutsDir:      cfg.Layouts,
+		layoutsDir:      filepath.Join(cfg.Path, cfg.LayoutDir),
 		extension:       cfg.Extension,
 		templates:       make(map[string]*template.Template),
 		funcMap:         FuncMap(),

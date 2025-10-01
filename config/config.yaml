@@ -47,8 +47,9 @@ jwt:
 
 # 模板配置
 template:
-  path: ./templates
-  layouts: ./templates/layouts
+  path: templates
+  layout_dir: layouts
+  default_layout: main
   extension: .html
 
 # 静态文件配置
