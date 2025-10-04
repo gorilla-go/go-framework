@@ -105,25 +105,10 @@ func handleHTTPError(w http.ResponseWriter, err error) {
 	}
 
 	isDev := tm.developmentMode
-
-	// 记录错误到日志系统(所有环境都记录)
-	logTemplateError(err, isDev)
+	if !isDev {
+		logger.Error("模板渲染错误", zap.Error(err))
+	}
 
 	// 使用统一的错误渲染页面
-	stack := string(debug.Stack())
-	errors.RenderError(w, err, stack, isDev)
-}
-
-// logTemplateError 记录模板错误到日志系统
-func logTemplateError(err error, isDev bool) {
-	if isDev {
-		logger.Error("模板渲染错误",
-			zap.Error(err),
-			zap.String("type", "template_render_error"),
-			zap.String("stack", string(debug.Stack())))
-	} else {
-		logger.Error("模板渲染错误",
-			zap.Error(err),
-			zap.String("type", "template_render_error"))
-	}
+	errors.RenderError(w, err, string(debug.Stack()), isDev)
 }
