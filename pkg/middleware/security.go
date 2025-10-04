@@ -18,7 +18,9 @@ func SecurityMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 
 		// 内容安全策略
-		c.Writer.Header().Set("Content-Security-Policy", "default-src 'self'")
+		// 允许 style-src 'unsafe-inline' 用于错误页面的内联样式
+		// 允许 script-src 'self' 用于本地脚本
+		c.Writer.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'")
 
 		// 引用策略
 		c.Writer.Header().Set("Referrer-Policy", "no-referrer-when-downgrade")

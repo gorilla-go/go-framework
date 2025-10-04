@@ -81,7 +81,7 @@ make dev
 # 生产模式
 make build    # 构建二进制文件
 make start    # 前台运行
-make start-d  # 后台运行
+make startd  # 后台运行
 make stop     # 停止后台服务
 ```
 
@@ -326,7 +326,7 @@ docker run -d \
 make build
 
 # 后台运行
-make start-d
+make startd
 
 # 查看状态
 make status
@@ -385,7 +385,7 @@ func CustomMiddleware() gin.HandlerFunc {
 | `make dev`        | 开发模式（热重载） |
 | `make build`      | 构建生产二进制     |
 | `make start`      | 前台运行           |
-| `make start-d`    | 后台运行           |
+| `make startd`     | 后台运行           |
 | `make stop`       | 停止后台服务       |
 | `make install`    | 安装 Node.js 依赖  |
 | `make gulp-build` | 构建静态资源       |

@@ -14,6 +14,9 @@ type IndexController struct {
 func (i *IndexController) Annotation(rb *router.RouteBuilder) {
 	// 使用带名称的GET路由
 	rb.GET("/", i.Index, "index@index")
+	rb.GET("/test-error", i.TestError, "index@test_error")
+	rb.GET("/test-panic", i.TestPanic, "index@test_panic")
+	rb.GET("/test-template-error", i.TestTemplateError, "index@test_template_error")
 }
 
 func (i *IndexController) Index(ctx *gin.Context) {
@@ -130,7 +133,30 @@ func (c *Controller) Show(ctx *gin.Context) {
 		},
 	}
 
-	// 使用模板引擎渲染模板
-	// 注意：模板管理器会自动设置 Content-Type 和状态码
-	template.RenderWithDefaultLayout(ctx.Writer, "index", data)
+	// 使用模板引擎渲染模板（使用默认布局）
+	// 自动错误处理：
+	// - 开发模式（server.mode: debug）：显示详细错误堆栈到浏览器 + 控制台日志
+	// - 生产模式（server.mode: release）：显示通用500错误页 + 详细日志到文件
+	template.RenderL(ctx.Writer, "index", data)
+}
+
+// TestError 测试错误处理（nil pointer）
+func (i *IndexController) TestError(ctx *gin.Context) {
+	var data *map[string]any
+	// 这会触发 nil pointer dereference
+	_ = (*data)["test"]
+}
+
+// TestPanic 测试 panic 错误
+func (i *IndexController) TestPanic(ctx *gin.Context) {
+	// 直接触发 panic
+	panic("This is a test panic error to demonstrate error handling")
+}
+
+// TestTemplateError 测试模板错误
+func (i *IndexController) TestTemplateError(ctx *gin.Context) {
+	// 渲染一个有语法错误的模板
+	template.RenderL(ctx.Writer, "test-error", gin.H{
+		"Title": "测试模板错误",
+	})
 }

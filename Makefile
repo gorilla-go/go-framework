@@ -1,7 +1,7 @@
-.PHONY: all dev build run stop start start-d help clean install gulp-build
+.PHONY: all dev build run stop start startd help clean install gulp-build
 
 # 默认目标
-all: dev-safe
+all: devs
 
 # 安装依赖
 install:
@@ -15,7 +15,7 @@ gulp-build:
 
 
 # 清理并启动开发环境
-dev-safe: clean dev
+devs: clean dev
 
 # 开发模式（带热重载）
 dev: gulp-build
@@ -23,7 +23,7 @@ dev: gulp-build
 	echo "🔍 检查端口 $$PORT 占用情况..."; \
 	if lsof -ti :$$PORT >/dev/null 2>&1; then \
 		echo "⚠️  端口 $$PORT 被占用，请运行 'make clean' 清理后重试"; \
-		echo "💡 或者直接运行 'make dev-safe' 自动清理并启动"; \
+		echo "💡 或者直接运行 'make devs' 自动清理并启动"; \
 		exit 1; \
 	fi; \
 	AIR_PATH=~/go/bin/air; \
@@ -31,7 +31,7 @@ dev: gulp-build
 		echo "Air未安装, 正在安装..."; \
 		go install github.com/air-verse/air@latest; \
 	fi; \
-	export GIN_MODE=debug; \
+	export SERVER_MODE=debug; \
 	echo "🚀 启动开发环境 (端口: $$PORT), 监控文件变更..."; \
 	(cd static && npm run watch &); \
 	$$AIR_PATH
@@ -48,13 +48,13 @@ run:
 # 前台启动
 start: build
 	@echo "前台启动应用程序..."
-	@export GIN_MODE=release; bin/app
+	@export SERVER_MODE=release; bin/app
 
 # 后台启动
-start-d: build
+startd: build
 	@echo "后台启动应用程序..."
 	@mkdir -p logs
-	@export GIN_MODE=release; nohup bin/app > logs/app.out 2>&1 & echo $$! > .pid
+	@export SERVER_MODE=release; nohup bin/app > logs/app.out 2>&1 & echo $$! > .pid
 	@echo "应用程序已在后台启动, PID: $$(cat .pid)"
 
 # 生产环境停止
@@ -97,7 +97,7 @@ help:
 	@echo "可用命令:"
 	@echo "  🚀 开发相关:"
 	@echo "    make dev         - 以开发模式运行 (带热重载)"
-	@echo "    make dev-safe    - 清理并启动开发环境 (推荐)"
+	@echo "    make devs        - 清理并启动开发环境 (推荐)"
 	@echo ""
 	@echo "  🏗️  构建相关:"
 	@echo "    make build       - 构建应用程序"
@@ -107,13 +107,13 @@ help:
 	@echo ""
 	@echo "  🔧 生产环境:"
 	@echo "    make start       - 构建并在前台启动生产服务"
-	@echo "    make start-d     - 构建并在后台启动生产服务"
+	@echo "    make startd     - 构建并在后台启动生产服务"
 	@echo "    make stop        - 停止运行的应用程序"
 	@echo ""
 	@echo "  🧹 清理相关:"
 	@echo "    make clean       - 清理临时文件"
 	@echo ""
 	@echo "  💡 推荐流程:"
-	@echo "    1. 开发时: make dev-safe"
+	@echo "    1. 开发时: make devs"
 	@echo "    2. 遇到端口冲突: make clean"
 	@echo "    3. Ctrl+C 退出后: make clean (清理孤儿进程)"

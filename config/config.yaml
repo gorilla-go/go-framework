@@ -1,7 +1,7 @@
 # Server 配置
 server:
   port: 8081
-  mode: debug # debug, release, test
+  mode: debug # debug, release
   read_timeout: 60
   write_timeout: 60
   idle_timeout: 60
@@ -50,16 +50,11 @@ template:
   path: templates
   layout_dir: layouts
   default_layout: main
-  extension: .html
+  extension: html
 
 # 静态文件配置
 static:
   path: ./static/dist
-
-# Gzip压缩配置
-gzip:
-  enabled: true # 是否启用gzip压缩
-  level: 6 # 压缩级别 (1-9, 1最快, 9最高压缩比) 
 
 # Session配置
 session:

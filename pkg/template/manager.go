@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/gorilla-go/go-framework/pkg/config"
+	"github.com/gorilla-go/go-framework/pkg/errors"
 )
 
 // Manager 模板管理器接口
@@ -118,7 +119,7 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 
 	// 如果没有指定任何模板，返回错误
 	if len(names) == 0 {
-		return nil, NewTemplateError("VALIDATION_ERROR", "没有指定任何模板文件", "", ErrInvalidTemplateName)
+		return nil, errors.NewTemplateError("VALIDATION_ERROR", "没有指定任何模板文件", "", errors.ErrInvalidTemplateName)
 	}
 
 	// 需要加载的所有模板文件路径
@@ -130,14 +131,14 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 			continue
 		}
 		// 验证模板名称
-		if err := ValidateTemplateName(name); err != nil {
+		if err := errors.ValidateTemplateName(name); err != nil {
 			return nil, err
 		}
-		allTemplateFiles = append(allTemplateFiles, filepath.Join(tm.templatesDir, name+tm.extension))
+		allTemplateFiles = append(allTemplateFiles, filepath.Join(tm.templatesDir, name+"."+tm.extension))
 	}
 
 	if len(allTemplateFiles) == 0 {
-		return nil, NewTemplateError("VALIDATION_ERROR", "没有找到有效的模板文件", "", ErrInvalidTemplateName)
+		return nil, errors.NewTemplateError("VALIDATION_ERROR", "没有找到有效的模板文件", "", errors.ErrInvalidTemplateName)
 	}
 
 	// 确定主模板名称（基础模板）- 使用第一个模板作为基础
@@ -149,7 +150,7 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 	// 解析所有模板文件
 	tmpl, err = tmpl.ParseFiles(allTemplateFiles...)
 	if err != nil {
-		return nil, NewParseError(strings.Join(names, ":"), err)
+		return nil, errors.NewParseError(strings.Join(names, ":"), err)
 	}
 
 	// 非开发模式下缓存模板
@@ -173,16 +174,16 @@ func (tm *TemplateManager) updateLoadStats(cacheKey string) {
 // Render 渲染模板，支持可选布局参数
 func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...string) error {
 	// 验证模板名称
-	if err := ValidateTemplateName(name); err != nil {
-		return tm.renderError(w, err)
+	if err := errors.ValidateTemplateName(name); err != nil {
+		return err
 	}
 
 	var templateNames []string
 
 	// 处理布局参数
 	if len(layout) > 0 && layout[0] != "" {
-		if err := ValidateLayoutName(layout[0]); err != nil {
-			return tm.renderError(w, err)
+		if err := errors.ValidateLayoutName(layout[0]); err != nil {
+			return err
 		}
 		templateNames = append(templateNames, filepath.Join("layouts", layout[0]))
 	}
@@ -193,7 +194,7 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...
 	// 加载并渲染模板
 	tmpl, err := tm.loadTemplate(templateNames...)
 	if err != nil {
-		return tm.renderError(w, err)
+		return err
 	}
 
 	// 在渲染前设置 Content-Type（如果 w 是 http.ResponseWriter 且未设置）
@@ -201,7 +202,7 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...
 
 	// 执行模板渲染
 	if err := tmpl.Execute(w, data); err != nil {
-		return tm.renderError(w, NewRenderError(name, err))
+		return errors.NewRenderError(name, err)
 	}
 	return nil
 }
@@ -239,7 +240,7 @@ func (tm *TemplateManager) RenderPartial(w io.Writer, name string, data any) err
 func (tm *TemplateManager) RenderMultiple(w io.Writer, data any, names ...string) error {
 	tmpl, err := tm.loadTemplate(names...)
 	if err != nil {
-		return tm.renderError(w, err)
+		return err
 	}
 	return tmpl.Execute(w, data)
 }
@@ -247,11 +248,11 @@ func (tm *TemplateManager) RenderMultiple(w io.Writer, data any, names ...string
 // RenderBlock 动态加载指定模板文件中的特定块并渲染
 func (tm *TemplateManager) RenderBlock(templatePath, blockName string, data any) template.HTML {
 	// 验证参数
-	if err := ValidateTemplateName(templatePath); err != nil {
+	if err := errors.ValidateTemplateName(templatePath); err != nil {
 		return tm.renderBlockError(err)
 	}
 	if blockName == "" {
-		return tm.renderBlockError(NewTemplateError("VALIDATION_ERROR", "块名称不能为空", templatePath, nil))
+		return tm.renderBlockError(errors.NewTemplateError("VALIDATION_ERROR", "块名称不能为空", templatePath, nil))
 	}
 
 	var buf strings.Builder
@@ -262,11 +263,11 @@ func (tm *TemplateManager) RenderBlock(templatePath, blockName string, data any)
 
 	if block := tmpl.Lookup(blockName); block != nil {
 		if err := block.Execute(&buf, data); err != nil {
-			return tm.renderBlockError(NewRenderError(templatePath, err))
+			return tm.renderBlockError(errors.NewRenderError(templatePath, err))
 		}
 		return template.HTML(buf.String())
 	}
-	return tm.renderBlockError(NewBlockNotFoundError(templatePath, blockName))
+	return tm.renderBlockError(errors.NewBlockNotFoundError(templatePath, blockName))
 }
 
 // renderBlockError 渲染块错误信息
@@ -281,23 +282,6 @@ func (tm *TemplateManager) renderBlockError(err error) template.HTML {
 			template.HTMLEscapeString(err.Error()),
 		),
 	)
-}
-
-// renderError 内部错误处理函数
-func (tm *TemplateManager) renderError(w io.Writer, err error) error {
-	if !tm.developmentMode {
-		return err
-	}
-	errorHTML := fmt.Sprintf(`
-	<div style="color:rgb(211, 50, 66); background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 15px; border-radius: 4px;">
-		<h3 style="margin-top: 0;">模板渲染错误</h3>
-		<pre style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; overflow: auto;">%s</pre>
-	</div>`, template.HTMLEscapeString(err.Error()))
-	_, writeErr := w.Write([]byte(errorHTML))
-	if writeErr != nil {
-		return fmt.Errorf("原始错误: %v, 写入错误页面失败: %v", err, writeErr)
-	}
-	return nil
 }
 
 // ClearCache 清除模板缓存

@@ -2,6 +2,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"math"
@@ -47,13 +48,13 @@ func FuncMap() template.FuncMap {
 		"nl2br":     Nl2br,
 		"stripTags": StripTags,
 
-		// 数值处理（最常用）- 使用优化版本
-		"add":      fastAdd,
-		"subtract": fastSubtract,
-		"multiply": fastMultiply,
-		"divide":   fastDivide,
+		// 数值处理（最常用）
+		"add":      Add,
+		"subtract": Subtract,
+		"multiply": Multiply,
+		"divide":   Divide,
 		"mod":      Mod,
-		"round":    fastRound,
+		"round":    Round,
 
 		// 日期时间处理（最常用）
 		"now":            Now,
@@ -62,13 +63,13 @@ func FuncMap() template.FuncMap {
 		"dateFormat":     DateFormat,
 		"humanizeTime":   HumanizeTime,
 
-		// 集合处理（最常用）- 使用优化版本
+		// 集合处理（最常用）
 		"first":    First,
 		"last":     Last,
-		"empty":    fastEmpty,
-		"notEmpty": func(a any) bool { return !fastEmpty(a) },
-		"length":   fastLength,
-		"inArray":  fastInArray,
+		"empty":    Empty,
+		"notEmpty": NotEmpty,
+		"length":   Length,
+		"inArray":  InArray,
 
 		// Map处理函数
 		"map":     NewMap,
@@ -100,6 +101,12 @@ func FuncMap() template.FuncMap {
 		"render": func(templatePath, blockName string, data any) template.HTML {
 			return RenderBlock(templatePath, blockName, data)
 		},
+
+		// 错误处理
+		"panic": Panic,
+
+		// 调试函数
+		"dump": Dump,
 	}
 }
 
@@ -175,12 +182,44 @@ func StripTags(s string) string {
 
 // ========== 数值处理函数 ==========
 
-// Add 加法
+// Add 加法（优化版本，优先处理常见类型）
 //
 // 模板使用示例:
 // {{ add 5 3 }} <!-- 输出: 8 -->
 // {{ add 5.5 3.2 }} <!-- 输出: 8.7 -->
 func Add(a, b any) any {
+	// 优先处理最常见的类型，避免反射开销
+	switch aVal := a.(type) {
+	case int:
+		switch bVal := b.(type) {
+		case int:
+			return aVal + bVal
+		case float64:
+			return float64(aVal) + bVal
+		case int64:
+			return int64(aVal) + bVal
+		}
+	case float64:
+		switch bVal := b.(type) {
+		case float64:
+			return aVal + bVal
+		case int:
+			return aVal + float64(bVal)
+		case int64:
+			return aVal + float64(bVal)
+		}
+	case int64:
+		switch bVal := b.(type) {
+		case int64:
+			return aVal + bVal
+		case int:
+			return aVal + int64(bVal)
+		case float64:
+			return float64(aVal) + bVal
+		}
+	}
+
+	// 回退到反射方式处理其他类型
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
@@ -204,12 +243,44 @@ func Add(a, b any) any {
 	return 0
 }
 
-// Subtract 减法
+// Subtract 减法（优化版本）
 //
 // 模板使用示例:
 // {{ subtract 10 3 }} <!-- 输出: 7 -->
 // {{ subtract 10.5 3.2 }} <!-- 输出: 7.3 -->
 func Subtract(a, b any) any {
+	// 优先处理常见类型
+	switch aVal := a.(type) {
+	case int:
+		switch bVal := b.(type) {
+		case int:
+			return aVal - bVal
+		case float64:
+			return float64(aVal) - bVal
+		case int64:
+			return int64(aVal) - bVal
+		}
+	case float64:
+		switch bVal := b.(type) {
+		case float64:
+			return aVal - bVal
+		case int:
+			return aVal - float64(bVal)
+		case int64:
+			return aVal - float64(bVal)
+		}
+	case int64:
+		switch bVal := b.(type) {
+		case int64:
+			return aVal - bVal
+		case int:
+			return aVal - int64(bVal)
+		case float64:
+			return float64(aVal) - bVal
+		}
+	}
+
+	// 回退到反射方式
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
@@ -233,12 +304,44 @@ func Subtract(a, b any) any {
 	return 0
 }
 
-// Multiply 乘法
+// Multiply 乘法（优化版本）
 //
 // 模板使用示例:
 // {{ multiply 5 3 }} <!-- 输出: 15 -->
 // {{ multiply 5.5 3 }} <!-- 输出: 16.5 -->
 func Multiply(a, b any) any {
+	// 优先处理常见类型
+	switch aVal := a.(type) {
+	case int:
+		switch bVal := b.(type) {
+		case int:
+			return aVal * bVal
+		case float64:
+			return float64(aVal) * bVal
+		case int64:
+			return int64(aVal) * bVal
+		}
+	case float64:
+		switch bVal := b.(type) {
+		case float64:
+			return aVal * bVal
+		case int:
+			return aVal * float64(bVal)
+		case int64:
+			return aVal * float64(bVal)
+		}
+	case int64:
+		switch bVal := b.(type) {
+		case int64:
+			return aVal * bVal
+		case int:
+			return aVal * int64(bVal)
+		case float64:
+			return float64(aVal) * bVal
+		}
+	}
+
+	// 回退到反射方式
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
@@ -262,13 +365,72 @@ func Multiply(a, b any) any {
 	return 0
 }
 
-// Divide 除法
+// Divide 除法（优化版本）
 //
 // 模板使用示例:
 // {{ divide 10 2 }} <!-- 输出: 5 -->
 // {{ divide 10 3 }} <!-- 输出: 3.3333333333333335 -->
 // {{ divide 10 0 }} <!-- 输出: "除数不能为零" -->
 func Divide(a, b any) any {
+	// 优先处理常见类型
+	switch aVal := a.(type) {
+	case int:
+		switch bVal := b.(type) {
+		case int:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / float64(bVal)
+		case float64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / bVal
+		case int64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / float64(bVal)
+		}
+	case float64:
+		switch bVal := b.(type) {
+		case float64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return aVal / bVal
+		case int:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return aVal / float64(bVal)
+		case int64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return aVal / float64(bVal)
+		}
+	case int64:
+		switch bVal := b.(type) {
+		case int64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / float64(bVal)
+		case int:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / float64(bVal)
+		case float64:
+			if bVal == 0 {
+				return "除数不能为零"
+			}
+			return float64(aVal) / bVal
+		}
+	}
+
+	// 回退到反射方式
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
@@ -327,13 +489,30 @@ func Mod(a, b any) any {
 	return 0
 }
 
-// Round 四舍五入
+// Round 四舍五入（优化版本）
 //
 // 模板使用示例:
 // {{ round 3.1415926 2 }} <!-- 输出: 3.14 -->
 // {{ round 3.1415926 4 }} <!-- 输出: 3.1416 -->
 func Round(a any, precision int) float64 {
-	f, _ := toFloat64(a)
+	var f float64
+
+	// 优先处理常见类型
+	switch v := a.(type) {
+	case float64:
+		f = v
+	case float32:
+		f = float64(v)
+	case int:
+		f = float64(v)
+	case int64:
+		f = float64(v)
+	case int32:
+		f = float64(v)
+	default:
+		f, _ = toFloat64(a)
+	}
+
 	p := math.Pow10(precision)
 	return math.Round(f*p) / p
 }
@@ -481,7 +660,7 @@ func Last(a any) any {
 	return nil
 }
 
-// Empty 检查是否为空
+// Empty 检查是否为空（优化版本）
 //
 // 模板使用示例:
 // {{ if empty .Items }}暂无数据{{ end }}
@@ -492,20 +671,45 @@ func Empty(a any) bool {
 		return true
 	}
 
-	v := reflect.ValueOf(a)
-	switch v.Kind() {
+	// 优先处理常见类型
+	switch v := a.(type) {
+	case string:
+		return v == ""
+	case int:
+		return v == 0
+	case int64:
+		return v == 0
+	case float64:
+		return v == 0
+	case bool:
+		return !v
+	case []string:
+		return len(v) == 0
+	case []int:
+		return len(v) == 0
+	case []any:
+		return len(v) == 0
+	case map[string]any:
+		return len(v) == 0
+	case map[string]string:
+		return len(v) == 0
+	}
+
+	// 回退到反射方式
+	rv := reflect.ValueOf(a)
+	switch rv.Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map, reflect.String:
-		return v.Len() == 0
+		return rv.Len() == 0
 	case reflect.Bool:
-		return !v.Bool()
+		return !rv.Bool()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
+		return rv.Int() == 0
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return v.Uint() == 0
+		return rv.Uint() == 0
 	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
+		return rv.Float() == 0
 	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
+		return rv.IsNil()
 	}
 
 	return false
@@ -519,27 +723,88 @@ func NotEmpty(a any) bool {
 	return !Empty(a)
 }
 
-// Length 返回长度
+// Length 返回长度（优化版本，正确处理中文）
 //
 // 模板使用示例:
 // {{ length .Items }} <!-- 输出: 切片的长度 -->
 // {{ length "Hello" }} <!-- 输出: 5 -->
+// {{ length "你好" }} <!-- 输出: 2 -->
 func Length(a any) int {
-	v := reflect.ValueOf(a)
-	switch v.Kind() {
-	case reflect.Array, reflect.Slice, reflect.Map, reflect.String:
-		return v.Len()
+	// 优先处理常见类型
+	switch v := a.(type) {
+	case string:
+		return len([]rune(v)) // 正确处理中文字符
+	case []string:
+		return len(v)
+	case []int:
+		return len(v)
+	case []any:
+		return len(v)
+	case map[string]any:
+		return len(v)
+	case map[string]string:
+		return len(v)
+	case map[string]int:
+		return len(v)
+	}
+
+	// 回退到反射方式
+	rv := reflect.ValueOf(a)
+	switch rv.Kind() {
+	case reflect.Array, reflect.Slice, reflect.Map:
+		return rv.Len()
+	case reflect.String:
+		return len([]rune(rv.String())) // 正确处理中文
 	}
 
 	return 0
 }
 
-// InArray 检查元素是否在数组中
+// InArray 检查元素是否在数组中（优化版本）
 //
 // 模板使用示例:
 // {{ if inArray "admin" .Roles }}是管理员{{ end }}
 // {{ if inArray 5 .AllowedIds }}ID有效{{ end }}
 func InArray(needle any, haystack any) bool {
+	// 优先处理常见类型
+	switch arr := haystack.(type) {
+	case []string:
+		if needleStr, ok := needle.(string); ok {
+			for _, item := range arr {
+				if item == needleStr {
+					return true
+				}
+			}
+			return false
+		}
+	case []int:
+		if needleInt, ok := needle.(int); ok {
+			for _, item := range arr {
+				if item == needleInt {
+					return true
+				}
+			}
+			return false
+		}
+	case []int64:
+		if needleInt64, ok := needle.(int64); ok {
+			for _, item := range arr {
+				if item == needleInt64 {
+					return true
+				}
+			}
+			return false
+		}
+	case []any:
+		for _, item := range arr {
+			if reflect.DeepEqual(needle, item) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 回退到反射方式
 	v := reflect.ValueOf(haystack)
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 		return false
@@ -900,4 +1165,174 @@ func NewMap(values ...any) map[string]any {
 	}
 
 	return dict
+}
+
+// ========== 错误处理函数 ==========
+
+// Panic 在模板中触发panic，用于报告致命错误
+//
+// 模板使用示例:
+// {{ if empty .User }}
+//   {{ panic "用户信息不能为空" }}
+// {{ end }}
+//
+// {{ if not (mapHas .Config "database") }}
+//   {{ panic "缺少数据库配置" }}
+// {{ end }}
+func Panic(message string) string {
+	panic(message)
+}
+
+// ========== 调试函数 ==========
+
+// Dump 调试打印变量内容，支持数组、切片、结构体、指针等类型
+//
+// 模板使用示例:
+// {{ dump .User }}
+// {{ dump .Items }}
+// {{ dump .Config }}
+func Dump(v any) template.HTML {
+	if v == nil {
+		return template.HTML("<pre>nil</pre>")
+	}
+
+	output := dumpValue(reflect.ValueOf(v), 0)
+	return template.HTML("<pre>" + template.HTMLEscapeString(output) + "</pre>")
+}
+
+// dumpValue 递归打印值的详细内容
+func dumpValue(v reflect.Value, indent int) string {
+	if !v.IsValid() {
+		return "invalid"
+	}
+
+	// 处理指针类型
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "nil"
+		}
+		return "*" + dumpValue(v.Elem(), indent)
+	}
+
+	// 处理接口类型
+	if v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return "nil"
+		}
+		return dumpValue(v.Elem(), indent)
+	}
+
+	indentStr := strings.Repeat("  ", indent)
+	nextIndentStr := strings.Repeat("  ", indent+1)
+
+	switch v.Kind() {
+	case reflect.Struct:
+		// 先尝试使用 JSON 序列化（更可读）
+		if v.CanInterface() {
+			if jsonBytes, err := json.MarshalIndent(v.Interface(), indentStr, "  "); err == nil {
+				return string(jsonBytes)
+			}
+		}
+
+		// 回退到字段打印
+		var result strings.Builder
+		result.WriteString(v.Type().String() + " {\n")
+
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Type().Field(i)
+			fieldValue := v.Field(i)
+
+			// 跳过未导出的字段
+			if !field.IsExported() {
+				continue
+			}
+
+			result.WriteString(nextIndentStr)
+			result.WriteString(field.Name)
+			result.WriteString(": ")
+
+			if fieldValue.CanInterface() {
+				result.WriteString(dumpValue(fieldValue, indent+1))
+			} else {
+				result.WriteString("<unexported>")
+			}
+
+			result.WriteString("\n")
+		}
+
+		result.WriteString(indentStr + "}")
+		return result.String()
+
+	case reflect.Slice, reflect.Array:
+		if v.Len() == 0 {
+			return "[]"
+		}
+
+		// 先尝试使用 JSON 序列化
+		if v.CanInterface() {
+			if jsonBytes, err := json.MarshalIndent(v.Interface(), indentStr, "  "); err == nil {
+				return string(jsonBytes)
+			}
+		}
+
+		var result strings.Builder
+		result.WriteString("[\n")
+
+		for i := 0; i < v.Len(); i++ {
+			result.WriteString(nextIndentStr)
+			result.WriteString(fmt.Sprintf("[%d]: ", i))
+			result.WriteString(dumpValue(v.Index(i), indent+1))
+			result.WriteString("\n")
+		}
+
+		result.WriteString(indentStr + "]")
+		return result.String()
+
+	case reflect.Map:
+		if v.Len() == 0 {
+			return "{}"
+		}
+
+		// 先尝试使用 JSON 序列化
+		if v.CanInterface() {
+			if jsonBytes, err := json.MarshalIndent(v.Interface(), indentStr, "  "); err == nil {
+				return string(jsonBytes)
+			}
+		}
+
+		var result strings.Builder
+		result.WriteString("{\n")
+
+		iter := v.MapRange()
+		for iter.Next() {
+			result.WriteString(nextIndentStr)
+			result.WriteString(fmt.Sprintf("%v: ", iter.Key().Interface()))
+			result.WriteString(dumpValue(iter.Value(), indent+1))
+			result.WriteString("\n")
+		}
+
+		result.WriteString(indentStr + "}")
+		return result.String()
+
+	case reflect.String:
+		return fmt.Sprintf("%q", v.String())
+
+	case reflect.Bool:
+		return fmt.Sprintf("%t", v.Bool())
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fmt.Sprintf("%d", v.Int())
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return fmt.Sprintf("%d", v.Uint())
+
+	case reflect.Float32, reflect.Float64:
+		return fmt.Sprintf("%g", v.Float())
+
+	default:
+		if v.CanInterface() {
+			return fmt.Sprintf("%v", v.Interface())
+		}
+		return fmt.Sprintf("<%s>", v.Kind())
+	}
 }

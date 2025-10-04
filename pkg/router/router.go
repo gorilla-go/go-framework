@@ -1,12 +1,12 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/config"
-	"github.com/gorilla-go/go-framework/pkg/errors"
 	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/middleware"
-	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 type Router struct {
@@ -47,11 +47,6 @@ func (router *Router) Route() *gin.Engine {
 		r.Use(router.Middlewares...)
 	}
 
-	// 根据配置启用 gzip 压缩
-	if cfg.Gzip.Enabled {
-		r.Use(middleware.GzipWithLevelMiddleware(cfg.Gzip.Level))
-	}
-
 	// 根据配置启用全局限流
 	if cfg.Server.EnableRateLimit {
 		r.Use(middleware.RateLimitMiddleware(cfg.Server.RateLimit, cfg.Server.RateBurst))
@@ -70,7 +65,8 @@ func (router *Router) Route() *gin.Engine {
 
 	// 404处理
 	r.NoRoute(func(c *gin.Context) {
-		response.Fail(c, errors.NewNotFound("", nil))
+		c.Writer.WriteHeader(http.StatusNotFound)
+		c.Abort()
 	})
 
 	return r

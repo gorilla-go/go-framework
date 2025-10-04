@@ -18,7 +18,6 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Template TemplateConfig `mapstructure:"template"`
 	Static   StaticConfig   `mapstructure:"static"`
-	Gzip     GzipConfig     `mapstructure:"gzip"`
 	Session  SessionConfig  `mapstructure:"session"`
 }
 
@@ -87,12 +86,6 @@ type StaticConfig struct {
 	Path string `mapstructure:"path"`
 }
 
-// GzipConfig Gzip压缩配置
-type GzipConfig struct {
-	Enabled bool `mapstructure:"enabled"`
-	Level   int  `mapstructure:"level"`
-}
-
 // SessionConfig 会话配置
 type SessionConfig struct {
 	// 存储类型: cookie, redis
@@ -141,9 +134,6 @@ func Fetch() (*Config, error) {
 		v.AutomaticEnv()
 		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-		// 兼容 GIN_MODE 环境变量（Gin 框架的标准环境变量）
-		v.BindEnv("server.mode", "GIN_MODE")
-
 		// 尝试读取配置文件
 		if err := v.ReadInConfig(); err != nil {
 			configErr = fmt.Errorf("读取配置文件失败: %w", err)
@@ -161,6 +151,14 @@ func Fetch() (*Config, error) {
 	})
 
 	return globalConfig, configErr
+}
+
+func MustFetch() *Config {
+	config, err := Fetch()
+	if err != nil {
+		panic(err)
+	}
+	return config
 }
 
 func (c *Config) IsDebug() bool {
