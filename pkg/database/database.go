@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gorilla-go/go-framework/pkg/config"
@@ -10,8 +11,22 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// InitDB 初始化数据库连接
+var (
+	dbInstance *gorm.DB
+	dbError    error
+	once       sync.Once
+)
+
+// Init 初始化数据库连接（全局只能初始化一次）
 func Init(cfg *config.DatabaseConfig) (*gorm.DB, error) {
+	once.Do(func() {
+		dbInstance, dbError = initDB(cfg)
+	})
+	return dbInstance, dbError
+}
+
+// initDB 内部初始化函数
+func initDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	// 构建DSN
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.Username,

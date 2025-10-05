@@ -1,13 +1,8 @@
 package controller
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla-go/go-framework/pkg/cookie"
-	"github.com/gorilla-go/go-framework/pkg/request"
 	"github.com/gorilla-go/go-framework/pkg/router"
-	"github.com/gorilla-go/go-framework/pkg/session"
 	"github.com/gorilla-go/go-framework/pkg/template"
 	"go.uber.org/fx"
 )
@@ -19,7 +14,6 @@ type IndexController struct {
 func (i *IndexController) Annotation(rb *router.RouteBuilder) {
 	// 使用带名称的GET路由
 	rb.GET("/", i.Index, "index@index")
-	rb.GET("/index2/:id", i.Index2, "index@index2")
 }
 
 func (i *IndexController) Index(ctx *gin.Context) {
@@ -136,12 +130,5 @@ func (c *Controller) Show(ctx *gin.Context) {
 		},
 	}
 
-	fmt.Println(session.Get(ctx).Get("name"))
-	cookie.Set(ctx, "go_name", "yehua")
 	template.RenderL(ctx.Writer, "index", data)
-}
-
-func (i *IndexController) Index2(ctx *gin.Context) {
-	id := request.Input[int](ctx, "id")
-	fmt.Println(id)
 }

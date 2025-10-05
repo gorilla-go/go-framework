@@ -31,13 +31,13 @@ func (router *Router) Route() *gin.Engine {
 
 	// 添加全局中间件
 	r.Use(
-		middleware.RecoveryMiddleware(),
+		middleware.Recovery(),
 		gin.Logger(),
-		middleware.LoggerMiddleware(),
-		middleware.SessionMiddleware(
+		middleware.Logger(),
+		middleware.SessionStart(
 			&router.Cfg.Session,
 			&router.Cfg.Redis,
-			logger.GetLogger(),
+			&router.Cfg.Database,
 		),
 	)
 
@@ -64,8 +64,7 @@ func (router *Router) Route() *gin.Engine {
 
 	// 404处理
 	r.NoRoute(func(c *gin.Context) {
-		c.Writer.WriteHeader(http.StatusNotFound)
-		c.Abort()
+		c.AbortWithStatus(http.StatusNotFound)
 	})
 
 	return r

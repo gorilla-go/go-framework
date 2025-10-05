@@ -1,11 +1,12 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/database"
 	"github.com/gorilla-go/go-framework/pkg/eventbus"
-	"github.com/gorilla-go/go-framework/pkg/logger"
 	"github.com/gorilla-go/go-framework/pkg/router"
 	"gorm.io/gorm"
 
@@ -26,7 +27,7 @@ var Providers = []any{
 func Config() *config.Config {
 	cfg, err := config.Fetch()
 	if err != nil {
-		logger.Fatalf("加载配置失败: %v", err)
+		panic(fmt.Sprintf("加载配置失败: %v", err))
 	}
 	return cfg
 }
@@ -35,7 +36,7 @@ func Config() *config.Config {
 func Database(cfg *config.Config) *gorm.DB {
 	db, err := database.Init(&cfg.Database)
 	if err != nil {
-		logger.Fatalf("初始化数据库失败: %v", err)
+		panic(fmt.Sprintf("初始化数据库失败: %v", err))
 	}
 	return db
 }

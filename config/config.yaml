@@ -58,7 +58,7 @@ static:
 
 # Session配置
 session:
-  store: cookie # cookie, redis
+  store: cookie # cookie, redis, gorm, memory
   name: go_session
   secret: "session-secret-key"
   max_age: 60 # 分钟

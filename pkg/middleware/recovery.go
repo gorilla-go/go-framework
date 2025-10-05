@@ -10,8 +10,8 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
-// RecoveryMiddleware 恢复中间件
-func RecoveryMiddleware() gin.HandlerFunc {
+// Recovery 恢复中间件
+func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {

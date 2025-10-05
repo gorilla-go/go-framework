@@ -7,14 +7,16 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
+	gormsession "github.com/gin-contrib/sessions/gorm"
+	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/config"
-	"go.uber.org/zap"
+	"github.com/gorilla-go/go-framework/pkg/database"
 )
 
 // Start 启动会话中间件
-func Start(sessionConfig *config.SessionConfig, redisConfig *config.RedisConfig, logger *zap.Logger) gin.HandlerFunc {
+func Start(sessionConfig *config.SessionConfig, redisConfig *config.RedisConfig, dbConfig *config.DatabaseConfig) gin.HandlerFunc {
 	// 创建存储
 	var store sessions.Store
 	var err error
@@ -39,10 +41,29 @@ func Start(sessionConfig *config.SessionConfig, redisConfig *config.RedisConfig,
 		// redis.NewStore 参数: size, network, address, username, password, keyPairs
 		store, err = redis.NewStore(poolSize, "tcp", redisAddr, "", redisConfig.Password, []byte(sessionConfig.Secret))
 		if err != nil {
-			logger.Error("创建 Redis 会话存储失败", zap.Error(err), zap.String("addr", redisAddr))
 			panic(fmt.Sprintf("Redis 会话存储初始化失败: %v", err))
 		}
-		logger.Info("Redis 会话存储已初始化", zap.String("addr", redisAddr), zap.Int("poolSize", poolSize))
+
+	case "gorm":
+		// 使用GORM数据库存储
+		if dbConfig == nil {
+			panic("GORM 会话存储初始化失败: 数据库配置为空")
+		}
+
+		// 初始化数据库连接
+		gormDB, err := database.Init(dbConfig)
+		if err != nil {
+			panic(fmt.Sprintf("GORM 会话存储初始化失败: %v", err))
+		}
+
+		// NewStore 参数: db, expiredSessionCleanup, keyPairs
+		// expiredSessionCleanup: 是否启用过期会话自动清理
+		store = gormsession.NewStore(gormDB, true, []byte(sessionConfig.Secret))
+
+	case "memory":
+		// 使用内存存储
+		store = memstore.NewStore([]byte(sessionConfig.Secret))
+
 	default:
 		// 默认使用Cookie存储
 		store = cookie.NewStore([]byte(sessionConfig.Secret))

@@ -10,8 +10,8 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
-// LoggerMiddleware 日志中间件
-func LoggerMiddleware() gin.HandlerFunc {
+// Logger 日志中间件
+func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 开始时间
 		startTime := time.Now()
