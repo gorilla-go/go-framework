@@ -50,7 +50,6 @@ func SessionMiddleware(sessionConfig *config.SessionConfig, redisConfig *config.
 	default:
 		// 默认使用Cookie存储
 		store = cookie.NewStore([]byte(sessionConfig.Secret))
-		logger.Info("Cookie 会话存储已初始化")
 	}
 
 	// 解析 SameSite

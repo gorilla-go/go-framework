@@ -34,7 +34,9 @@ var (
 func getTemplateErrorRegex() *regexp.Regexp {
 	templateErrorReOnce.Do(func() {
 		cfg := config.MustFetch()
-		templateErrorRe = regexp.MustCompile(`template:\s+([\w\-/.]+\.` + cfg.Template.Extension + `):(\d+)`)
+		// 匹配所有可能的模板路径格式，包括子目录（如 layouts/main.html）
+		// [\w\-/.]+ 可以匹配字母、数字、下划线、连字符、斜杠和点
+		templateErrorRe = regexp.MustCompile(`template:\s+([\w\-/]+\.` + cfg.Template.Extension + `):(\d+)`)
 	})
 	return templateErrorRe
 }
@@ -206,10 +208,18 @@ func resolveTemplateFilePath(fileName string) string {
 	cfg := config.MustFetch()
 	pwd, _ := os.Getwd()
 
-	// 尝试从模板目录构建路径
+	// 尝试从模板目录构建路径（支持子目录，如 layouts/main.html）
 	templatePath := filepath.Join(pwd, cfg.Template.Path, fileName)
 	if _, err := os.Stat(templatePath); err == nil {
 		return templatePath
+	}
+
+	// 如果文件名不包含路径分隔符，尝试从 layouts 目录查找
+	if !strings.Contains(fileName, "/") && !strings.Contains(fileName, string(filepath.Separator)) {
+		layoutPath := filepath.Join(pwd, cfg.Template.Path, cfg.Template.LayoutDir, fileName)
+		if _, err := os.Stat(layoutPath); err == nil {
+			return layoutPath
+		}
 	}
 
 	// 尝试从当前工作目录构建路径

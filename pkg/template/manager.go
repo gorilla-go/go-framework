@@ -1,6 +1,7 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,7 +18,6 @@ import (
 type Manager interface {
 	Render(w io.Writer, name string, data any, layout ...string) error
 	RenderWithDefaultLayout(w io.Writer, name string, data any) error
-	RenderPartial(w io.Writer, name string, data any) error
 	RenderMultiple(w io.Writer, data any, names ...string) error
 	RenderBlock(templatePath, blockName string, data any) template.HTML
 	ClearCache()
@@ -145,7 +145,7 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 	baseTemplateName := filepath.Base(allTemplateFiles[0])
 
 	// 创建带函数的基础模板
-	tmpl = template.New(baseTemplateName).Funcs(tm.funcMap)
+	tmpl = template.New(baseTemplateName).Funcs(tm.funcMap).Option("missingkey=error")
 
 	// 解析所有模板文件
 	tmpl, err = tmpl.ParseFiles(allTemplateFiles...)
@@ -169,6 +169,22 @@ func (tm *TemplateManager) updateLoadStats(cacheKey string) {
 	tm.statsMutex.Lock()
 	defer tm.statsMutex.Unlock()
 	tm.loadStats[cacheKey]++
+}
+
+// executeTemplate 内部方法：使用缓冲区执行模板，避免部分渲染
+func (tm *TemplateManager) executeTemplate(w io.Writer, tmpl *template.Template, data any, templateName string) error {
+	// 先渲染到缓冲区
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return errors.NewRenderError(templateName, err)
+	}
+
+	// 渲染成功后设置 Content-Type
+	tm.ensureContentType(w)
+
+	// 将缓冲区内容写入响应
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 // Render 渲染模板，支持可选布局参数
@@ -197,14 +213,8 @@ func (tm *TemplateManager) Render(w io.Writer, name string, data any, layout ...
 		return err
 	}
 
-	// 在渲染前设置 Content-Type（如果 w 是 http.ResponseWriter 且未设置）
-	tm.ensureContentType(w)
-
-	// 执行模板渲染
-	if err := tmpl.Execute(w, data); err != nil {
-		return errors.NewRenderError(name, err)
-	}
-	return nil
+	// 使用缓冲区执行模板
+	return tm.executeTemplate(w, tmpl, data, name)
 }
 
 // RenderWithDefaultLayout 使用默认布局渲染模板
@@ -231,18 +241,15 @@ func (tm *TemplateManager) ensureContentType(w io.Writer) {
 	}
 }
 
-// RenderPartial 渲染部分模板（不使用布局）
-func (tm *TemplateManager) RenderPartial(w io.Writer, name string, data any) error {
-	return tm.Render(w, name, data)
-}
-
 // RenderMultiple 渲染多个模板
 func (tm *TemplateManager) RenderMultiple(w io.Writer, data any, names ...string) error {
 	tmpl, err := tm.loadTemplate(names...)
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(w, data)
+	// 使用缓冲区执行模板
+	templateName := strings.Join(names, ":")
+	return tm.executeTemplate(w, tmpl, data, templateName)
 }
 
 // RenderBlock 动态加载指定模板文件中的特定块并渲染
