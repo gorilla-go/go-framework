@@ -1028,10 +1028,7 @@ func compare(a, b any) int {
 // <a href="{{ url "user@show" }}">用户页面</a>
 // <a href="{{ url "user@detail" (map "id" 123) }}">用户详情</a>
 func Route(name string, params ...map[string]any) template.URL {
-	url, err := router.BuildUrl(name, params...)
-	if err != nil {
-		panic(err) // 如果路由不存在，则触发 panic
-	}
+	url := router.BuildUrl(name, params...)
 	return template.URL(url)
 }
 
@@ -1173,11 +1170,15 @@ func NewMap(values ...any) map[string]any {
 //
 // 模板使用示例:
 // {{ if empty .User }}
-//   {{ panic "用户信息不能为空" }}
+//
+//	{{ panic "用户信息不能为空" }}
+//
 // {{ end }}
 //
 // {{ if not (mapHas .Config "database") }}
-//   {{ panic "缺少数据库配置" }}
+//
+//	{{ panic "缺少数据库配置" }}
+//
 // {{ end }}
 func Panic(message string) string {
 	panic(message)

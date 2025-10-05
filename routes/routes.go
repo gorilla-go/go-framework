@@ -8,6 +8,5 @@ import (
 func init() {
 	router.RegisterControllers(
 		&controller.IndexController{},
-		&controller.SystemController{},
 	)
 }

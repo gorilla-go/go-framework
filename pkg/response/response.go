@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/errors"
-	"github.com/gorilla-go/go-framework/pkg/logger"
 )
 
 // Response 统一响应结构
@@ -19,14 +18,14 @@ type Response struct {
 func Success(c *gin.Context, data any) {
 	resp := Response{
 		Code:    errors.Success,
-		Message: "成功",
+		Message: "",
 		Data:    data,
 	}
 	c.JSON(http.StatusOK, resp)
 }
 
 // SuccessWithDetail 带详细信息的成功响应
-func SuccessWithDetail(c *gin.Context, detail string, data any) {
+func SuccessD(c *gin.Context, detail string, data any) {
 	resp := Response{
 		Code:    errors.Success,
 		Message: detail,
@@ -44,9 +43,6 @@ func Fail(c *gin.Context, err error) {
 		appErr = errors.NewInternalServerError("系统错误", err)
 	}
 
-	// 记录错误日志
-	logger.Errorf("请求失败: %s, 路径: %s, 错误: %v", c.Request.Method, c.Request.URL.Path, err)
-
 	// 构建响应
 	resp := Response{
 		Code:    appErr.Code,
@@ -57,4 +53,23 @@ func Fail(c *gin.Context, err error) {
 	// 返回响应
 	c.JSON(appErr.HTTPStatus(), resp)
 	c.Abort()
+}
+
+func Redirect(c *gin.Context, url string, status ...int) {
+	if len(status) > 0 && status[0] == 301 {
+		c.Redirect(http.StatusMovedPermanently, url)
+		c.Abort()
+		return
+	}
+
+	c.Redirect(http.StatusFound, url)
+	c.Abort()
+}
+
+func BadRequest(c *gin.Context) {
+	Fail(c, errors.NewBadRequest("无效请求", nil))
+}
+
+func Forbidden(c *gin.Context) {
+	Fail(c, errors.NewForbidden("无权访问", nil))
 }

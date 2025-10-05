@@ -34,7 +34,6 @@ func (router *Router) Route() *gin.Engine {
 		middleware.RecoveryMiddleware(),
 		gin.Logger(),
 		middleware.LoggerMiddleware(),
-		middleware.SecurityMiddleware(),
 		middleware.SessionMiddleware(
 			&router.Cfg.Session,
 			&router.Cfg.Redis,

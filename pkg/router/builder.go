@@ -164,13 +164,13 @@ func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
 }
 
 // BuildUrl 根据路由名称和参数生成URL
-func BuildUrl(name string, params ...map[string]any) (string, error) {
+func BuildUrl(name string, params ...map[string]any) string {
 	routesMutex.RLock()
 	route, exists := routes[name]
 	routesMutex.RUnlock()
 
 	if !exists {
-		return "", fmt.Errorf("路由不存在: %s", name)
+		panic(fmt.Errorf("路由不存在: %s", name))
 	}
 
 	path := route.Path
@@ -189,17 +189,17 @@ func BuildUrl(name string, params ...map[string]any) (string, error) {
 
 	// 检查是否还有未替换的参数
 	if strings.Contains(path, ":") {
-		parts := strings.Split(path, "/")
-		for _, part := range parts {
-			if strings.HasPrefix(part, ":") {
-				missingParams = append(missingParams, strings.TrimPrefix(part, ":"))
+		parts := strings.SplitSeq(path, "/")
+		for part := range parts {
+			if after, ok := strings.CutPrefix(part, ":"); ok {
+				missingParams = append(missingParams, after)
 			}
 		}
 	}
 
 	if len(missingParams) > 0 {
-		return "", fmt.Errorf("缺少路径参数: %s", strings.Join(missingParams, ", "))
+		panic(fmt.Errorf("缺少路径参数: %s", strings.Join(missingParams, ", ")))
 	}
 
-	return path, nil
+	return path
 }
