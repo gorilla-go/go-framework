@@ -35,23 +35,16 @@ func SuccessD(c *gin.Context, detail string, data any) {
 }
 
 // Fail 失败响应
-func Fail(c *gin.Context, err error) {
-	// 尝试将错误转换为AppError
-	appErr, ok := errors.IsAppError(err)
-	if !ok {
-		// 如果不是AppError，则创建内部服务器错误
-		appErr = errors.NewInternalServerError("系统错误", err)
-	}
-
+func Fail(c *gin.Context, err *errors.AppError) {
 	// 构建响应
 	resp := Response{
-		Code:    appErr.Code,
-		Message: appErr.Message,
-		Data:    appErr.Detail,
+		Code:    err.Code,
+		Message: err.Message,
+		Data:    err.Detail,
 	}
 
 	// 返回响应
-	c.JSON(appErr.HTTPStatus(), resp)
+	c.JSON(err.HTTPStatus(), resp)
 	c.Abort()
 }
 
