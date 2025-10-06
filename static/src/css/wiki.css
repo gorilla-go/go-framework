@@ -65,38 +65,61 @@
 /* 框架功能卡片网格 */
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 30px;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
     margin-bottom: 60px;
 }
 
 .feature-card {
-    border-radius: 10px;
-    padding: 25px;
+    border-radius: 12px;
+    padding: 28px;
     background-color: white;
     box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 0;
+    background: linear-gradient(180deg, var(--gradient-start), var(--gradient-end));
+    transition: height 0.3s ease;
+}
+
+.feature-card:hover::before {
+    height: 100%;
 }
 
 .feature-card:hover {
-    transform: translateY(-8px);
+    transform: translateY(-4px);
     box-shadow: var(--hover-shadow);
+    border-color: rgba(3, 102, 214, 0.2);
 }
 
 .feature-card h3 {
     color: var(--primary-color);
     margin-top: 0;
-    font-size: 1.4em;
+    font-size: 1.5em;
+    font-weight: 600;
     border-bottom: 2px solid var(--secondary-color);
-    padding-bottom: 12px;
-    margin-bottom: 15px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .feature-card p {
     color: #586069;
-    margin-bottom: 20px;
-    line-height: 1.6;
+    margin-bottom: 18px;
+    line-height: 1.7;
+    font-size: 0.95em;
 }
 
 /* 代码块样式 */
@@ -238,34 +261,44 @@
 
 /* 示例卡片样式 */
 .example-card {
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
     box-shadow: var(--card-shadow);
     border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.example-card:hover {
+    box-shadow: var(--hover-shadow);
+    transform: translateY(-2px);
 }
 
 .example-header {
-    padding: 20px 25px;
-    background-color: var(--secondary-color);
-    border-bottom: 1px solid var(--border-color);
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid var(--border-color);
 }
 
 .example-header h3 {
     margin: 0;
     color: var(--primary-color);
-    font-size: 1.5em;
+    font-size: 1.6em;
+    font-weight: 600;
 }
 
 .example-body {
-    padding: 25px;
+    padding: 28px;
     background-color: white;
 }
 
 .example-body p {
     margin-top: 0;
     margin-bottom: 20px;
-    line-height: 1.6;
+    line-height: 1.7;
+    color: #586069;
+    font-size: 0.98em;
 }
 
 /* 功能卡片中的代码块特殊样式 */
@@ -311,10 +344,68 @@
 /* 快速入门卡片 */
 .quickstart-card {
     background-color: white;
-    border-radius: 10px;
-    padding: 30px;
+    border-radius: 12px;
+    padding: 32px;
     box-shadow: var(--card-shadow);
     border: 1px solid var(--border-color);
+    transition: box-shadow 0.3s ease;
+}
+
+.quickstart-card:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+.quickstart-card > p {
+    color: #586069;
+    font-size: 1.05em;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+/* 技术栈样式优化 */
+.tech-stack {
+    background-color: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.tech-stack ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.tech-stack li {
+    padding: 16px;
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.2s ease;
+}
+
+.tech-stack li:hover {
+    background-color: #e9ecef;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tech-stack li strong {
+    color: var(--primary-color);
+    font-size: 1.05em;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.tech-stack li::before {
+    content: "▸";
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-right: 8px;
 }
 
 /* 页脚样式 */
@@ -330,18 +421,30 @@
 @media (max-width: 768px) {
     .feature-grid {
         grid-template-columns: 1fr;
+        gap: 20px;
     }
-    
+
+    .tech-stack ul {
+        grid-template-columns: 1fr;
+    }
+
     .wiki-header {
         padding: 40px 15px;
     }
-    
+
     .wiki-header h1 {
         font-size: 2.2em;
     }
-    
+
     .wiki-header p {
         font-size: 1.1em;
+    }
+
+    .feature-card,
+    .example-card,
+    .quickstart-card,
+    .tech-stack {
+        padding: 20px;
     }
 
     /* 移动设备上调整代码块 */
@@ -353,12 +456,12 @@
     .code-line-content {
         padding: 0 6px;
     }
-    
+
     .code-lang-label {
         font-size: 9px;
         padding: 1px 4px;
     }
-    
+
     .code-block {
         font-size: 11px;
     }

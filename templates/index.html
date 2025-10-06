@@ -15,83 +15,6 @@
                 <div class="code-block" data-lang="go">{{ safeHTML .Example }}</div>
             </div>
             {{ end }}
-
-            <div class="feature-card">
-                <h3>事件总线</h3>
-                <p>JavaScript风格的事件管理器，支持线程安全的事件注册、触发和移除，提供松耦合的事件驱动编程</p>
-                <div class="code-block" data-lang="go">// 注册事件监听器
-eventbus.On("user.login", func(args ...interface{}) {
-    username := args[0].(string)
-    fmt.Printf("用户登录: %s\n", username)
-})
-
-// 注册一次性监听器
-eventbus.Once("app.start", func(args ...interface{}) {
-    fmt.Println("应用启动完成")
-})
-
-// 触发事件
-eventbus.Emit("user.login", "张三")
-
-// 移除监听器
-eventbus.Off("user.login")</div>
-            </div>
-
-            <div class="feature-card">
-                <h3>会话管理</h3>
-                <p>支持Cookie、Redis、GORM、Memory四种存储方式，提供完整的会话操作和Flash消息功能</p>
-                <div class="code-block" data-lang="go">// 设置会话
-session.Set(c, "user_id", 123)
-
-// 获取会话
-userID := session.GetValue(c, "user_id")
-
-// Flash消息（一次性）
-session.SetFlash(c, "success", "操作成功")
-msg, _ := session.GetFlash(c, "success")</div>
-            </div>
-
-            <div class="feature-card">
-                <h3>Cookie操作</h3>
-                <p>简洁的Cookie读写工具，支持设置过期时间、路径、域名等选项</p>
-                <div class="code-block" data-lang="go">// 设置Cookie（3600秒后过期）
-cookie.Set(c, "token", "abc123", 3600)
-
-// 获取Cookie
-token := cookie.Get(c, "token")
-
-// 删除Cookie
-cookie.Delete(c, "token")</div>
-            </div>
-
-            <div class="feature-card">
-                <h3>统一响应</h3>
-                <p>标准化的API响应格式，统一错误处理和状态码映射</p>
-                <div class="code-block" data-lang="go">// 成功响应
-response.Success(c, data)
-
-// 带消息的成功响应
-response.SuccessD(c, "操作成功", data)
-
-// 错误响应
-response.Fail(c, errors.NewNotFound("未找到", nil))
-
-// 重定向
-response.Redirect(c, "/login")</div>
-            </div>
-
-            <div class="feature-card">
-                <h3>请求处理</h3>
-                <p>便捷的请求参数绑定和验证工具</p>
-                <div class="code-block" data-lang="go">// 绑定JSON请求
-var req CreateUserRequest
-if err := request.BindJSON(c, &req); err != nil {
-    return
-}
-
-// 自动验证和错误处理
-// 支持各种请求格式</div>
-            </div>
         </div>
     </div>
 
@@ -108,70 +31,6 @@ if err := request.BindJSON(c, &req); err != nil {
             </div>
         </div>
         {{ end }}
-
-        <div class="example-card">
-            <div class="example-header">
-                <h3>事件驱动编程</h3>
-            </div>
-            <div class="example-body">
-                <p>使用事件总线实现松耦合的模块间通信，支持异步事件处理</p>
-                <div class="code-block" data-lang="go">// 在控制器中触发事件
-func (c *UserController) Login(ctx *gin.Context) {
-    // 登录逻辑...
-    eventbus.Emit("user.login", user.ID, user.Username, ctx.ClientIP())
-    response.Success(ctx, user)
-}
-
-// 在服务中监听事件
-func init() {
-    // 记录登录日志
-    eventbus.On("user.login", func(args ...interface{}) {
-        userID := args[0]
-        username := args[1]
-        ip := args[2]
-        logger.Info("用户登录", "user_id", userID, "username", username, "ip", ip)
-    })
-
-    // 更新最后登录时间
-    eventbus.On("user.login", func(args ...interface{}) {
-        userID := args[0]
-        userService.UpdateLastLoginTime(userID)
-    })
-}</div>
-            </div>
-        </div>
-
-        <div class="example-card">
-            <div class="example-header">
-                <h3>会话和Cookie使用</h3>
-            </div>
-            <div class="example-body">
-                <p>完整的会话管理和Cookie操作示例</p>
-                <div class="code-block" data-lang="go">// 登录时设置会话和Cookie
-func (c *AuthController) Login(ctx *gin.Context) {
-    // 验证用户...
-
-    // 设置会话
-    session.Set(ctx, "user_id", user.ID)
-    session.Set(ctx, "username", user.Name)
-
-    // 设置Cookie（7天有效期）
-    cookie.Set(ctx, "remember_token", token, 7*24*3600)
-
-    // 设置Flash消息
-    session.SetFlash(ctx, "success", "登录成功")
-
-    response.Redirect(ctx, "/dashboard")
-}
-
-// 登出时清除会话
-func (c *AuthController) Logout(ctx *gin.Context) {
-    session.Clear(ctx)
-    cookie.Delete(ctx, "remember_token")
-    response.Redirect(ctx, "/login")
-}</div>
-            </div>
-        </div>
     </div>
 
     <div class="section">
@@ -213,14 +72,9 @@ make clean</div>
         <h2 class="section-title">技术栈</h2>
         <div class="tech-stack">
             <ul>
-                <li><strong>Gin</strong> - 高性能HTTP Web框架</li>
-                <li><strong>Uber FX</strong> - 依赖注入和生命周期管理</li>
-                <li><strong>GORM</strong> - 强大的ORM库</li>
-                <li><strong>Viper</strong> - 灵活的配置管理</li>
-                <li><strong>Zap</strong> - 高性能结构化日志</li>
-                <li><strong>Air</strong> - 开发热重载工具</li>
-                <li><strong>Gin Sessions</strong> - 会话管理</li>
-                <li><strong>Gulp</strong> - 前端资源构建管道</li>
+                {{ range .TechStack }}
+                <li><strong>{{ .Name }}</strong> - {{ .Description }}</li>
+                {{ end }}
             </ul>
         </div>
     </div>
