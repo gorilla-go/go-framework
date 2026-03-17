@@ -16,7 +16,7 @@ func (i *IndexController) Annotation(rb *router.RouteBuilder) {
 	rb.GET("/", i.Index, "index@index")
 }
 
-func (i *IndexController) Index(ctx *gin.Context) {
+func (i *IndexController) Index(ctx *gin.Context) error {
 	data := gin.H{
 		"Title": "Go Framework Wiki",
 		"Features": []map[string]any{
@@ -258,4 +258,5 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	template.RenderL(ctx.Writer, "index", data)
+	return nil
 }

@@ -1,7 +1,6 @@
 package request
 
 import (
-	"fmt"
 	"mime/multipart"
 	"net"
 	"strconv"
@@ -239,72 +238,42 @@ func AcceptsHTML(c *gin.Context) bool {
 }
 
 // getRawValue 获取原始字符串值（内部辅助函数）
-// 优先级：POST > GET > URL Params > JSON Body
+// 优先级：POST Form > Query > URL Params
 func getRawValue(c *gin.Context, key string) string {
-	var value string
-
-	// 1. 尝试从 POST Form 获取
-	if value = c.PostForm(key); value != "" {
-		return value
+	if v := c.PostForm(key); v != "" {
+		return v
 	}
-
-	// 2. 尝试从 Query 获取
-	if value = c.Query(key); value != "" {
-		return value
+	if v := c.Query(key); v != "" {
+		return v
 	}
-
-	// 3. 尝试从 URL Params 获取
-	if value = c.Param(key); value != "" {
-		return value
+	if v := c.Param(key); v != "" {
+		return v
 	}
-
-	// 4. 尝试从 JSON Body 获取（如果是 JSON 请求）
-	if IsJSON(c) {
-		var jsonData map[string]interface{}
-		if err := c.ShouldBindJSON(&jsonData); err == nil {
-			if val, ok := jsonData[key]; ok {
-				// 将任意类型转换为字符串
-				switch v := val.(type) {
-				case string:
-					return v
-				case float64:
-					return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", v), "0"), ".")
-				case bool:
-					return fmt.Sprintf("%t", v)
-				default:
-					return fmt.Sprintf("%v", v)
-				}
-			}
-		}
-	}
-
 	return ""
 }
 
 // getArrayValues 获取数组形式的字符串值（内部辅助函数）
 // 支持: ?key[]=a&key[]=b, ?key=a&key=b, ?key=a,b 等格式
 func getArrayValues(c *gin.Context, key string) []string {
-	// 1. 尝试从 Query 获取数组
-	if values := c.QueryArray(key); len(values) > 0 {
-		return values
+	if v := c.QueryArray(key); len(v) > 0 {
+		return v
 	}
-	if values := c.QueryArray(key + "[]"); len(values) > 0 {
-		return values
+	if v := c.QueryArray(key + "[]"); len(v) > 0 {
+		return v
 	}
-
-	// 2. 尝试从 POST Form 获取数组
-	if values := c.PostFormArray(key); len(values) > 0 {
-		return values
+	if v := c.PostFormArray(key); len(v) > 0 {
+		return v
 	}
-	if values := c.PostFormArray(key + "[]"); len(values) > 0 {
-		return values
+	if v := c.PostFormArray(key + "[]"); len(v) > 0 {
+		return v
 	}
-
-	// 3. 尝试获取单个值，按逗号分隔
-	if value := getRawValue(c, key); value != "" {
-		return strings.Split(value, ",")
+	// 兜底：单值按逗号分割（支持 ?key=a,b,c 或 form key=a,b,c）
+	if v := c.Query(key); v != "" {
+		return strings.Split(v, ",")
 	}
-
+	if v := c.PostForm(key); v != "" {
+		return strings.Split(v, ",")
+	}
 	return nil
 }
 
@@ -326,97 +295,93 @@ func getArrayValues(c *gin.Context, key string) []string {
 //	file := request.Input[*multipart.FileHeader](c, "avatar")               // 单个文件
 //	files := request.Input[*multipart.FileHeader](c, "images")              // 多个文件
 func Input[T InputType](c *gin.Context, key string, defaultValue ...T) T {
-	// 获取默认值（用于类型推断和错误时返回）
 	var def T
 	if len(defaultValue) > 0 {
 		def = defaultValue[0]
 	}
 
-	// 处理文件类型
 	switch any(def).(type) {
 	case *multipart.FileHeader:
-		file, err := c.FormFile(key)
-		if err == nil {
+		if file, err := c.FormFile(key); err == nil {
 			return any(file).(T)
 		}
-		return def
 
 	case []*multipart.FileHeader:
-		form, err := c.MultipartForm()
-		if err == nil {
+		if form, err := c.MultipartForm(); err == nil {
 			if files, ok := form.File[key]; ok && len(files) > 0 {
 				return any(files).(T)
 			}
 		}
-		return def
-	}
 
-	// 处理数组类型
-	switch any(def).(type) {
 	case []string:
-		if values := getArrayValues(c, key); values != nil {
-			return any(values).(T)
+		if v := getArrayValues(c, key); v != nil {
+			return any(v).(T)
 		}
-		return def
 
 	case []int:
-		if strValues := getArrayValues(c, key); strValues != nil {
-			intValues := make([]int, 0, len(strValues))
-			for _, v := range strValues {
-				if intVal, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
-					intValues = append(intValues, intVal)
+		if items := getArrayValues(c, key); items != nil {
+			vals := make([]int, 0, len(items))
+			for _, s := range items {
+				if n, err := strconv.Atoi(strings.TrimSpace(s)); err == nil {
+					vals = append(vals, n)
 				}
 			}
-			if len(intValues) > 0 {
-				return any(intValues).(T)
+			if len(vals) > 0 {
+				return any(vals).(T)
 			}
 		}
-		return def
 
 	case []int64:
-		if strValues := getArrayValues(c, key); strValues != nil {
-			int64Values := make([]int64, 0, len(strValues))
-			for _, v := range strValues {
-				if int64Val, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil {
-					int64Values = append(int64Values, int64Val)
+		if items := getArrayValues(c, key); items != nil {
+			vals := make([]int64, 0, len(items))
+			for _, s := range items {
+				if n, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64); err == nil {
+					vals = append(vals, n)
 				}
 			}
-			if len(int64Values) > 0 {
-				return any(int64Values).(T)
+			if len(vals) > 0 {
+				return any(vals).(T)
 			}
 		}
-		return def
-	}
 
-	// 处理单值类型
-	value := getRawValue(c, key)
-	if value == "" {
-		return def
-	}
-
-	// 根据类型进行转换
-	switch any(def).(type) {
 	case string:
-		return any(value).(T)
+		if v := getRawValue(c, key); v != "" {
+			return any(v).(T)
+		}
+
 	case int:
-		if v, err := strconv.Atoi(value); err == nil {
-			return any(v).(T)
+		if v := getRawValue(c, key); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				return any(n).(T)
+			}
 		}
+
 	case int64:
-		if v, err := strconv.ParseInt(value, 10, 64); err == nil {
-			return any(v).(T)
+		if v := getRawValue(c, key); v != "" {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return any(n).(T)
+			}
 		}
+
 	case float32:
-		if v, err := strconv.ParseFloat(value, 32); err == nil {
-			return any(float32(v)).(T)
+		if v := getRawValue(c, key); v != "" {
+			if n, err := strconv.ParseFloat(v, 32); err == nil {
+				return any(float32(n)).(T)
+			}
 		}
+
 	case float64:
-		if v, err := strconv.ParseFloat(value, 64); err == nil {
-			return any(v).(T)
+		if v := getRawValue(c, key); v != "" {
+			if n, err := strconv.ParseFloat(v, 64); err == nil {
+				return any(n).(T)
+			}
 		}
+
 	case bool:
-		if v, err := strconv.ParseBool(value); err == nil {
-			return any(v).(T)
+		if v := getRawValue(c, key); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				return any(b).(T)
+			}
 		}
 	}
 

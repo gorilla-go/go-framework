@@ -24,6 +24,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/eventbus"
 	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/request"
 	"github.com/gorilla-go/go-framework/pkg/response"
 	"github.com/gorilla-go/go-framework/pkg/router"
 	"go.uber.org/fx"
@@ -82,7 +83,7 @@ type DemoEventController struct {
 
 func (d *DemoEventController) Annotation(rb *router.RouteBuilder) {
 	events := rb.Group("/demo/events")
-	events.POST("/emit", response.H(d.Emit), "demo@emitEvent")
+	events.POST("/emit", d.Emit, "demo@emitEvent")
 	events.GET("/stats", d.Stats, "demo@eventStats")
 	events.GET("/log", d.Log, "demo@eventLog")
 	events.DELETE("/log", d.ClearLog, "demo@clearEventLog")
@@ -106,8 +107,8 @@ type emitRequest struct {
 //	{ "event": "demo.welcome", "payload": null }   // Once 事件，第二次触发无效
 func (d *DemoEventController) Emit(c *gin.Context) error {
 	var req emitRequest
-	if !response.BindJSON(c, &req) {
-		return nil
+	if err := request.BindJSON(c, &req); err != nil {
+		return err
 	}
 
 	// 只允许触发 demo. 前缀的事件，防止误触系统事件
@@ -131,7 +132,7 @@ func (d *DemoEventController) Emit(c *gin.Context) error {
 
 // Stats GET /demo/events/stats
 // 演示 eventbus.Events() / ListenerCount() —— 查看事件总线当前状态
-func (d *DemoEventController) Stats(c *gin.Context) {
+func (d *DemoEventController) Stats(c *gin.Context) error {
 	events := eventbus.Events()
 	stats := make([]gin.H, 0, len(events))
 	for _, name := range events {
@@ -145,25 +146,28 @@ func (d *DemoEventController) Stats(c *gin.Context) {
 		"total_events": len(events),
 		"events":       stats,
 	})
+	return nil
 }
 
 // Log GET /demo/events/log
 // 查看已收集的事件日志
-func (d *DemoEventController) Log(c *gin.Context) {
+func (d *DemoEventController) Log(c *gin.Context) error {
 	eventLogMu.Lock()
 	snapshot := make([]eventLogEntry, len(eventLog))
 	copy(snapshot, eventLog)
 	eventLogMu.Unlock()
 
 	response.SuccessD(c, fmt.Sprintf("共 %d 条日志", len(snapshot)), snapshot)
+	return nil
 }
 
 // ClearLog DELETE /demo/events/log
 // 清空事件日志
-func (d *DemoEventController) ClearLog(c *gin.Context) {
+func (d *DemoEventController) ClearLog(c *gin.Context) error {
 	eventLogMu.Lock()
 	eventLog = eventLog[:0]
 	eventLogMu.Unlock()
 
 	response.SuccessD(c, "日志已清空", nil)
+	return nil
 }

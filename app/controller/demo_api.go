@@ -4,9 +4,9 @@ package controller
 //
 // 覆盖的新特性：
 //   - response.H()        —— handler 直接 return error，告别 response.Fail+return 样板
-//   - response.BindJSON() —— 一步完成 JSON 绑定 + 校验
-//   - response.BindUri()  —— 一步完成路径参数绑定 + 校验
-//   - response.BindQuery()—— 一步完成 Query 参数绑定 + 校验
+//   - request.BindJSON() —— 一步完成 JSON 绑定 + 校验
+//   - request.BindUri()  —— 一步完成路径参数绑定 + 校验
+//   - request.BindQuery()—— 一步完成 Query 参数绑定 + 校验
 //   - middleware.GetLogEntry().AddField() —— 在 handler 里追加字段到当前请求日志
 //
 // 路由：
@@ -23,6 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/errors"
 	"github.com/gorilla-go/go-framework/pkg/middleware"
+	"github.com/gorilla-go/go-framework/pkg/request"
 	"github.com/gorilla-go/go-framework/pkg/response"
 	"github.com/gorilla-go/go-framework/pkg/router"
 	"go.uber.org/fx"
@@ -57,13 +58,10 @@ type DemoAPIController struct {
 func (d *DemoAPIController) Annotation(rb *router.RouteBuilder) {
 	api := rb.Group("/demo/api")
 
-	// 普通 handler（不返回 error）
 	api.GET("/users", d.ListUsers, "demo@listUsers")
-
-	// response.H() 包装后，handler 可以直接 return error
-	api.GET("/users/:id", response.H(d.GetUser), "demo@getUser")
-	api.POST("/users", response.H(d.CreateUser), "demo@createUser")
-	api.DELETE("/users/:id", response.H(d.DeleteUser), "demo@deleteUser")
+	api.GET("/users/:id", d.GetUser, "demo@getUser")
+	api.POST("/users", d.CreateUser, "demo@createUser")
+	api.DELETE("/users/:id", d.DeleteUser, "demo@deleteUser")
 }
 
 // ---- ListUsers: 演示 BindQuery ----
@@ -74,12 +72,11 @@ type listUsersQuery struct {
 }
 
 // ListUsers GET /demo/api/users
-// 演示 response.BindQuery —— 绑定 Query 参数，无 keyword/role 时返回全部
-func (d *DemoAPIController) ListUsers(c *gin.Context) {
+// 演示 request.BindQuery —— 绑定 Query 参数，无 keyword/role 时返回全部
+func (d *DemoAPIController) ListUsers(c *gin.Context) error {
 	var query listUsersQuery
-	// BindQuery 绑定失败会自动写 400 响应
-	if !response.BindQuery(c, &query) {
-		return
+	if err := request.BindQuery(c, &query); err != nil {
+		return err
 	}
 
 	var result []*demoUser
@@ -96,6 +93,7 @@ func (d *DemoAPIController) ListUsers(c *gin.Context) {
 	})
 
 	response.SuccessD(c, fmt.Sprintf("共 %d 条", len(result)), result)
+	return nil
 }
 
 // ---- GetUser: 演示 H() + BindUri + LogEntry ----
@@ -109,8 +107,8 @@ type getUserUri struct {
 // 演示 middleware.GetLogEntry().AddField() —— 追加字段到当前请求日志
 func (d *DemoAPIController) GetUser(c *gin.Context) error {
 	var uri getUserUri
-	if !response.BindUri(c, &uri) {
-		return nil // BindUri 已写入响应，直接返回
+	if err := request.BindUri(c, &uri); err != nil {
+		return err
 	}
 
 	val, ok := demoStore.Load(uri.ID)
@@ -135,11 +133,11 @@ type createUserRequest struct {
 }
 
 // CreateUser POST /demo/api/users
-// 演示 response.BindJSON —— 绑定 JSON 请求体 + 校验（binding 标签）
+// 演示 request.BindJSON —— 绑定 JSON 请求体 + 校验（binding 标签）
 func (d *DemoAPIController) CreateUser(c *gin.Context) error {
 	var req createUserRequest
-	if !response.BindJSON(c, &req) {
-		return nil // BindJSON 已写入 400 响应
+	if err := request.BindJSON(c, &req); err != nil {
+		return err
 	}
 
 	if req.Role == "" {
@@ -170,8 +168,8 @@ type deleteUserUri struct {
 // DeleteUser DELETE /demo/api/users/:id
 func (d *DemoAPIController) DeleteUser(c *gin.Context) error {
 	var uri deleteUserUri
-	if !response.BindUri(c, &uri) {
-		return nil
+	if err := request.BindUri(c, &uri); err != nil {
+		return err
 	}
 
 	if _, ok := demoStore.LoadAndDelete(uri.ID); !ok {

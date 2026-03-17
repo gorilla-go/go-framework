@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/errors"
 	"github.com/gorilla-go/go-framework/pkg/middleware"
+	"github.com/gorilla-go/go-framework/pkg/request"
 	"github.com/gorilla-go/go-framework/pkg/response"
 	"github.com/gorilla-go/go-framework/pkg/router"
 	"go.uber.org/fx"
@@ -31,19 +32,19 @@ type DemoAuthController struct {
 
 func (d *DemoAuthController) Annotation(rb *router.RouteBuilder) {
 	// 公开路由：登录接口不需要认证
-	rb.POST("/demo/auth/login", response.H(d.Login), "demo@login")
+	rb.POST("/demo/auth/login", d.Login, "demo@login")
 
 	// ---- 演示 Group 级中间件 ----
 	// 只需在 Group 处传入 JWTMiddleware，组内所有路由自动校验 Bearer Token
 	protected := rb.Group("/demo/auth", middleware.JWTMiddleware(&d.Config.JWT))
-	protected.GET("/profile", response.H(d.Profile), "demo@profile")
+	protected.GET("/profile", d.Profile, "demo@profile")
 
 	// 管理员路由：叠加 RoleMiddleware，JWT 验证通过后再验证角色
 	adminGroup := rb.Group("/demo/auth",
 		middleware.JWTMiddleware(&d.Config.JWT),
 		middleware.RoleMiddleware("admin"),
 	)
-	adminGroup.GET("/admin-only", response.H(d.AdminOnly), "demo@adminOnly")
+	adminGroup.GET("/admin-only", d.AdminOnly, "demo@adminOnly")
 }
 
 // ---- 请求/响应结构 ----
@@ -62,8 +63,8 @@ type loginRequest struct {
 //	admin / 123456 → role: admin
 func (d *DemoAuthController) Login(c *gin.Context) error {
 	var req loginRequest
-	if !response.BindJSON(c, &req) {
-		return nil
+	if err := request.BindJSON(c, &req); err != nil {
+		return err
 	}
 
 	// 演示用账号（实际项目中应查询数据库）
