@@ -42,6 +42,7 @@ type LogConfig struct {
 	MaxAge     int    `mapstructure:"max_age"`
 	Compress   bool   `mapstructure:"compress"`
 	Format     string `mapstructure:"format"`
+	Stdout     bool   `mapstructure:"stdout"` // 是否同时输出到控制台
 }
 
 // DatabaseConfig 数据库配置

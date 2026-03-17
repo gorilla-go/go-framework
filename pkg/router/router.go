@@ -41,7 +41,10 @@ func (router *Router) Route() *gin.Engine {
 
 	// 根据配置启用全局限流
 	if cfg.Server.EnableRateLimit {
-		r.Use(middleware.RateLimitMiddleware(cfg.Server.RateLimit, cfg.Server.RateBurst))
+		r.Use(middleware.RateLimitMiddleware(
+			middleware.WithRate(cfg.Server.RateLimit),
+			middleware.WithBurst(cfg.Server.RateBurst),
+		))
 	}
 
 	// 静态文件

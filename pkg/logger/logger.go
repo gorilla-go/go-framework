@@ -64,8 +64,10 @@ func initZap(cfg *config.LogConfig) error {
 		level = zapcore.InfoLevel
 	}
 
-	// 创建编码器配置
-	encoderConfig := zapcore.EncoderConfig{
+	atomicLevel := zap.NewAtomicLevelAt(level)
+
+	// 文件编码器：始终使用 JSON 格式，便于日志平台采集
+	fileEncoderCfg := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
 		NameKey:        "logger",
@@ -78,27 +80,29 @@ func initZap(cfg *config.LogConfig) error {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
+	fileEncoder := zapcore.NewJSONEncoder(fileEncoderCfg)
 
-	// 创建输出配置
-	var encoder zapcore.Encoder
-	if cfg.Format == "json" {
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	} else {
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	}
-
-	// 创建日志文件
+	// 打开日志文件
 	logFile, err := os.OpenFile(cfg.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("打开日志文件失败: %w", err)
 	}
 
-	// 创建Core，只输出到文件
-	core := zapcore.NewCore(
-		encoder,
-		zapcore.AddSync(logFile),
-		zap.NewAtomicLevelAt(level),
-	)
+	// 文件 Core
+	fileCore := zapcore.NewCore(fileEncoder, zapcore.AddSync(logFile), atomicLevel)
+
+	// 根据配置决定是否同时输出到控制台
+	var core zapcore.Core
+	if cfg.Stdout {
+		consoleEncoderCfg := fileEncoderCfg
+		consoleEncoderCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder // 彩色大写级别
+		consoleEncoderCfg.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05.000")
+		consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderCfg)
+		consoleCore := zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), atomicLevel)
+		core = zapcore.NewTee(fileCore, consoleCore)
+	} else {
+		core = fileCore
+	}
 
 	// 创建Logger
 	ZapLogger = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))

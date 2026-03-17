@@ -18,6 +18,7 @@ log:
   max_age: 30 # days
   compress: true
   format: json # json, text
+  stdout: true # 是否同时输出到控制台（开发时建议开启）
 
 # 数据库配置
 database:

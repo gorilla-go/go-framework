@@ -1,11 +1,31 @@
 package response
 
 import (
+	stderrors "errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/validator"
 )
+
+// ErrHandlerFunc 支持直接返回 error 的 handler 类型（参考 Echo 设计）
+type ErrHandlerFunc func(*gin.Context) error
+
+// H 将 ErrHandlerFunc 包装为标准 gin.HandlerFunc
+// handler 返回 *errors.AppError 时自动调用 Fail()，其他 error 转为 500
+func H(f ErrHandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := f(c); err != nil {
+			var appErr *errors.AppError
+			if stderrors.As(err, &appErr) {
+				Fail(c, appErr)
+			} else {
+				Fail(c, errors.NewInternalServerError(err.Error(), err))
+			}
+		}
+	}
+}
 
 // Response 统一响应结构
 type Response struct {
@@ -57,6 +77,60 @@ func Redirect(c *gin.Context, url string, status ...int) {
 
 	c.Redirect(http.StatusFound, url)
 	c.Abort()
+}
+
+// Bind 绑定请求数据并自动校验（参考 Echo/Fiber 设计）
+// 成功返回 true，失败自动写入 400 响应并返回 false
+// 支持 JSON/Form/Query，具体绑定方式由 Gin 根据 Content-Type 决定
+func Bind(c *gin.Context, i any) bool {
+	if err := c.ShouldBind(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	if err := validator.Validate(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	return true
+}
+
+// BindJSON 绑定 JSON 请求体并自动校验
+func BindJSON(c *gin.Context, i any) bool {
+	if err := c.ShouldBindJSON(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	if err := validator.Validate(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	return true
+}
+
+// BindQuery 绑定 Query 参数并自动校验
+func BindQuery(c *gin.Context, i any) bool {
+	if err := c.ShouldBindQuery(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	if err := validator.Validate(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	return true
+}
+
+// BindUri 绑定路径参数并自动校验
+func BindUri(c *gin.Context, i any) bool {
+	if err := c.ShouldBindUri(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	if err := validator.Validate(i); err != nil {
+		Fail(c, errors.NewValidationError(err.Error(), err))
+		return false
+	}
+	return true
 }
 
 func BadRequest(c *gin.Context) {

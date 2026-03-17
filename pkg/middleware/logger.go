@@ -10,7 +10,33 @@ import (
 	"go.uber.org/zap"
 )
 
-const maxBodyLogSize = 1024
+const (
+	maxBodyLogSize = 1024
+	// LogEntryKey 是存储在 gin.Context 中的 LogEntry 键名
+	LogEntryKey = "log_entry"
+)
+
+// LogEntry 请求日志条目，支持在 handler 中追加自定义字段（参考 Chi LogEntry 设计）
+// 用法：middleware.GetLogEntry(c).AddField("user_id", userID)
+type LogEntry struct {
+	fields []zap.Field
+}
+
+// AddField 追加一个结构化日志字段，在请求结束时一并写入日志
+func (e *LogEntry) AddField(key string, value any) {
+	e.fields = append(e.fields, zap.Any(key, value))
+}
+
+// GetLogEntry 从 gin.Context 获取当前请求的 LogEntry
+// 可在任意 handler 或下游中间件中调用以追加字段
+func GetLogEntry(c *gin.Context) *LogEntry {
+	if v, exists := c.Get(LogEntryKey); exists {
+		if entry, ok := v.(*LogEntry); ok {
+			return entry
+		}
+	}
+	return &LogEntry{} // 返回空对象防止 nil panic
+}
 
 // Logger 日志中间件（基于 Zap 结构化日志）
 // isDev=true 时，对 4xx/5xx 请求额外记录请求体和响应体（便于调试）
@@ -19,6 +45,10 @@ func Logger(isDev bool) gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
+
+		// 创建 LogEntry 并注入 context，供下游 handler 追加字段
+		entry := &LogEntry{}
+		c.Set(LogEntryKey, entry)
 
 		// dev 模式下读取请求体（读后需还原）
 		var reqBody string
@@ -71,6 +101,9 @@ func Logger(isDev bool) gin.HandlerFunc {
 				fields = append(fields, zap.String("resp_body", resp))
 			}
 		}
+
+		// 合并 handler 通过 LogEntry 追加的自定义字段
+		fields = append(fields, entry.fields...)
 
 		msg := c.Request.Method + " " + path
 		log := logger.ZapLogger

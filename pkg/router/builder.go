@@ -36,15 +36,16 @@ func NewRouteBuilder(router *gin.Engine) *RouteBuilder {
 	}
 }
 
-// Group 创建路由组
-func (rb *RouteBuilder) Group(path string) *RouteBuilder {
+// Group 创建路由组，可选传入组级中间件（参考 Echo group middleware 设计）
+// 组级中间件只作用于该组内的路由，例如：rb.Group("/admin", middleware.JWT())
+func (rb *RouteBuilder) Group(path string, middleware ...gin.HandlerFunc) *RouteBuilder {
 	var group *gin.RouterGroup
 	newBasePath := rb.basePath + path
 
 	if rb.group != nil {
-		group = rb.group.Group(path)
+		group = rb.group.Group(path, middleware...)
 	} else {
-		group = rb.router.Group(path)
+		group = rb.router.Group(path, middleware...)
 	}
 
 	return &RouteBuilder{
