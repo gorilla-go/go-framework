@@ -2,133 +2,101 @@ package middleware
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla-go/go-framework/pkg/logger"
+	"go.uber.org/zap"
 )
 
-// Logger 日志中间件
-func Logger() gin.HandlerFunc {
+const maxBodyLogSize = 1024
+
+// Logger 日志中间件（基于 Zap 结构化日志）
+// isDev=true 时，对 4xx/5xx 请求额外记录请求体和响应体（便于调试）
+func Logger(isDev bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 开始时间
-		startTime := time.Now()
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
 
-		// 获取请求体
-		var requestBody []byte
-		if c.Request.Body != nil {
-			requestBody, _ = io.ReadAll(c.Request.Body)
+		// dev 模式下读取请求体（读后需还原）
+		var reqBody string
+		if isDev && c.Request.Body != nil {
+			raw, _ := io.ReadAll(c.Request.Body)
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(raw))
+			if len(raw) > maxBodyLogSize {
+				reqBody = string(raw[:maxBodyLogSize]) + "..."
+			} else if len(raw) > 0 {
+				reqBody = string(raw)
+			}
 		}
 
-		// 重置请求体，因为读取后会清空
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-
-		// 创建自定义响应写入器
-		writer := &responseWriter{
-			ResponseWriter: c.Writer,
-			body:           &bytes.Buffer{},
+		// dev 模式下捕获响应体
+		var rw *responseWriter
+		if isDev {
+			rw = &responseWriter{ResponseWriter: c.Writer, body: &bytes.Buffer{}}
+			c.Writer = rw
 		}
-		c.Writer = writer
 
-		// 处理请求
 		c.Next()
 
-		// 结束时间
-		endTime := time.Now()
-		latency := endTime.Sub(startTime)
+		latency := time.Since(start)
+		status := c.Writer.Status()
 
-		// 请求信息
-		requestInfo := map[string]any{
-			"method":     c.Request.Method,
-			"path":       c.Request.URL.Path,
-			"query":      c.Request.URL.RawQuery,
-			"ip":         c.ClientIP(),
-			"user_agent": c.Request.UserAgent(),
-			"status":     c.Writer.Status(),
-			"latency":    latency.String(),
+		fields := []zap.Field{
+			zap.String("method", c.Request.Method),
+			zap.String("path", path),
+			zap.String("ip", c.ClientIP()),
+			zap.Int("status", status),
+			zap.Duration("latency", latency),
+		}
+		if query != "" {
+			fields = append(fields, zap.String("query", query))
+		}
+		if ua := c.Request.UserAgent(); ua != "" {
+			fields = append(fields, zap.String("user_agent", ua))
 		}
 
-		// 请求头
-		headers := make(map[string]string)
-		for k, v := range c.Request.Header {
-			if len(v) > 0 {
-				headers[k] = v[0]
+		// 仅在 dev 模式且请求出错时附加 body 信息
+		if isDev && status >= 400 {
+			if reqBody != "" {
+				fields = append(fields, zap.String("req_body", reqBody))
 			}
-		}
-		requestInfo["headers"] = headers
-
-		// 请求体（可以根据需要添加）
-		if len(requestBody) > 0 {
-			// 限制请求体的大小，避免记录过大的请求体
-			if len(requestBody) > 1024 {
-				requestInfo["body"] = string(requestBody[:1024]) + "..."
-			} else {
-				requestInfo["body"] = string(requestBody)
+			if rw != nil && rw.body.Len() > 0 {
+				resp := rw.body.String()
+				if len(resp) > maxBodyLogSize {
+					resp = resp[:maxBodyLogSize] + "..."
+				}
+				fields = append(fields, zap.String("resp_body", resp))
 			}
 		}
 
-		// 响应体（可以根据需要添加）
-		if writer.body.Len() > 0 {
-			// 限制响应体的大小，避免记录过大的响应体
-			if writer.body.Len() > 1024 {
-				responseBody := writer.body.Bytes()[:1024]
-				requestInfo["response"] = string(responseBody) + "..."
-			} else {
-				requestInfo["response"] = writer.body.String()
-			}
-		}
+		msg := c.Request.Method + " " + path
+		log := logger.ZapLogger
 
-		logMsg := "[ REQUEST ] " + c.Request.Method + " " + c.Request.URL.Path
-		if c.Request.URL.RawQuery != "" {
-			logMsg += "?" + c.Request.URL.RawQuery
-		}
-		logMsg += "\n"
-		logMsg += "[ IP      ] " + c.ClientIP() + "\n"
-		logMsg += fmt.Sprintf("[ STATUS  ] %d\n", c.Writer.Status())
-		logMsg += "[ RUNTIME ] " + latency.String() + "\n"
-
-		if len(requestBody) > 0 {
-			bodyStr := string(requestBody)
-			if len(bodyStr) > 500 {
-				bodyStr = bodyStr[:500] + "..."
-			}
-			logMsg += "[ BODY    ] " + bodyStr + "\n"
-		}
-
-		if writer.body.Len() > 0 {
-			responseStr := writer.body.String()
-			if len(responseStr) > 500 {
-				responseStr = responseStr[:500] + "..."
-			}
-			logMsg += "[ RESPONSE] " + responseStr + "\n"
-		}
-
-		// 根据状态码记录不同级别的日志
-		if c.Writer.Status() >= 500 {
-			logger.Error(logMsg)
-		} else if c.Writer.Status() >= 400 {
-			logger.Warn(logMsg)
-		} else {
-			logger.Info(logMsg)
+		switch {
+		case status >= 500:
+			log.Error(msg, fields...)
+		case status >= 400:
+			log.Warn(msg, fields...)
+		default:
+			log.Info(msg, fields...)
 		}
 	}
 }
 
-// responseWriter 自定义响应写入器，用于捕获响应体
+// responseWriter 捕获响应体（仅 dev 模式使用）
 type responseWriter struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
 }
 
-// Write 重写Write方法，同时写入到原响应和缓冲区
 func (w *responseWriter) Write(b []byte) (int, error) {
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
 
-// WriteString 重写WriteString方法，同时写入到原响应和缓冲区
 func (w *responseWriter) WriteString(s string) (int, error) {
 	w.body.WriteString(s)
 	return w.ResponseWriter.WriteString(s)

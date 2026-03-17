@@ -11,15 +11,6 @@ const (
 	Success   = 200
 	NoContent = 204
 
-	// 重定向
-	MultipleChoices   = 300
-	MovedPermanently  = 301
-	Found             = 302
-	SeeOther          = 303
-	NotModified       = 304
-	TemporaryRedirect = 307
-	PermanentRedirect = 308
-
 	// 客户端错误
 	BadRequest       = 400
 	Unauthorized     = 401
@@ -48,13 +39,6 @@ const (
 var ErrMsg = map[int]string{
 	Success:             "成功",
 	NoContent:           "无内容",
-	MultipleChoices:     "多种选择",
-	MovedPermanently:    "永久移动",
-	Found:               "临时移动",
-	SeeOther:            "查看其他位置",
-	NotModified:         "未修改",
-	TemporaryRedirect:   "临时重定向",
-	PermanentRedirect:   "永久重定向",
 	BadRequest:          "无效的请求",
 	Unauthorized:        "未授权",
 	Forbidden:           "拒绝访问",

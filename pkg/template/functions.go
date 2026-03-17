@@ -1028,7 +1028,10 @@ func compare(a, b any) int {
 // <a href="{{ url "user@show" }}">用户页面</a>
 // <a href="{{ url "user@detail" (map "id" 123) }}">用户详情</a>
 func Route(name string, params ...map[string]any) template.URL {
-	url := router.BuildUrl(name, params...)
+	url, err := router.BuildUrl(name, params...)
+	if err != nil {
+		return template.URL("#")
+	}
 	return template.URL(url)
 }
 

@@ -35,15 +35,7 @@ type TemplateManager struct {
 	mutex           sync.RWMutex
 	defaultLayout   string
 	developmentMode bool
-	loadStats       map[string]int64 // 模板加载统计
-	statsMutex      sync.RWMutex
 }
-
-// 全局实例
-var (
-	defaultManager Manager
-	managerOnce    sync.Once
-)
 
 // NewTemplateManager 创建一个新的模板管理器
 func NewTemplateManager(cfg config.TemplateConfig, isDevelopment bool) *TemplateManager {
@@ -55,25 +47,9 @@ func NewTemplateManager(cfg config.TemplateConfig, isDevelopment bool) *Template
 		funcMap:         FuncMap(),
 		defaultLayout:   cfg.DefaultLayout,
 		developmentMode: isDevelopment,
-		loadStats:       make(map[string]int64),
 	}
 }
 
-// InitGlobalTemplateManager 初始化全局模板管理器（内部使用）
-func InitGlobalTemplateManager(cfg config.TemplateConfig, isDevelopment bool) Manager {
-	managerOnce.Do(func() {
-		defaultManager = NewTemplateManager(cfg, isDevelopment)
-	})
-	return defaultManager
-}
-
-// GetManager 获取全局模板管理器
-func GetManager() Manager {
-	if defaultManager == nil {
-		panic("模板管理器未初始化，请先调用 InitTemplateManager")
-	}
-	return defaultManager
-}
 
 // SetDevelopmentMode 设置开发模式
 func (tm *TemplateManager) SetDevelopmentMode(isDev bool) {
@@ -112,7 +88,6 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 
 		// 如果在缓存中找到，直接返回
 		if ok {
-			tm.updateLoadStats(cacheKey)
 			return tmpl, nil
 		}
 	}
@@ -160,15 +135,7 @@ func (tm *TemplateManager) loadTemplate(names ...string) (*template.Template, er
 		tm.mutex.Unlock()
 	}
 
-	tm.updateLoadStats(cacheKey)
 	return tmpl, nil
-}
-
-// updateLoadStats 更新加载统计
-func (tm *TemplateManager) updateLoadStats(cacheKey string) {
-	tm.statsMutex.Lock()
-	defer tm.statsMutex.Unlock()
-	tm.loadStats[cacheKey]++
 }
 
 // executeTemplate 内部方法：使用缓冲区执行模板，避免部分渲染
@@ -295,22 +262,5 @@ func (tm *TemplateManager) renderBlockError(err error) template.HTML {
 func (tm *TemplateManager) ClearCache() {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
-
 	tm.templates = make(map[string]*template.Template)
-
-	tm.statsMutex.Lock()
-	tm.loadStats = make(map[string]int64)
-	tm.statsMutex.Unlock()
-}
-
-// GetLoadStats 获取模板加载统计信息
-func (tm *TemplateManager) GetLoadStats() map[string]int64 {
-	tm.statsMutex.RLock()
-	defer tm.statsMutex.RUnlock()
-
-	stats := make(map[string]int64, len(tm.loadStats))
-	for k, v := range tm.loadStats {
-		stats[k] = v
-	}
-	return stats
 }

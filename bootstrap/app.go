@@ -118,8 +118,14 @@ func NewApp() *fx.App {
 			template.InitTemplateManager(cfg.Template, Config().IsDebug())
 		}),
 
-		// 控制器初始化
-		fx.Populate(router.ConvertController()...),
+		// 控制器初始化（FX 注入控制器依赖）
+		fx.Populate(func() []any {
+			deps := make([]any, len(router.Controllers))
+			for i, c := range router.Controllers {
+				deps[i] = c
+			}
+			return deps
+		}()...),
 
 		// 注册钩子
 		fx.Invoke(RegisterHooks),

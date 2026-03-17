@@ -19,7 +19,6 @@ var Providers = []any{
 	EventBus,
 	Database,
 	Controllers,
-	Middlewares,
 	Router,
 }
 
@@ -41,18 +40,13 @@ func Database(cfg *config.Config) *gorm.DB {
 	return db
 }
 
-func Middlewares() []gin.HandlerFunc {
-	return []gin.HandlerFunc{}
-}
-
 // 提供路由器
-func Router(controllers []router.IController, cfg *config.Config, middlewares []gin.HandlerFunc) *gin.Engine {
-	router := &router.Router{
+func Router(controllers []router.IController, cfg *config.Config) *gin.Engine {
+	r := &router.Router{
 		Controllers: controllers,
 		Cfg:         cfg,
-		Middlewares: middlewares,
 	}
-	return router.Route()
+	return r.Route()
 }
 
 // 提供控制器列表

@@ -1,20 +1,14 @@
 package router
 
+// IController 控制器接口，所有控制器必须实现该接口
 type IController interface {
-	RouterAnnotation
+	Annotation(rb *RouteBuilder)
 }
 
-// 路由注册控制器
+// Controllers 已注册的控制器列表
 var Controllers = []IController{}
 
+// RegisterControllers 注册控制器
 func RegisterControllers(controller ...IController) {
 	Controllers = append(Controllers, controller...)
-}
-
-func ConvertController() []any {
-	controllers := make([]any, len(Controllers))
-	for i, v := range Controllers {
-		controllers[i] = v
-	}
-	return controllers
 }

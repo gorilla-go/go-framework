@@ -15,11 +15,6 @@ type RouteBuilder struct {
 	basePath string
 }
 
-type RouterAnnotation interface {
-	// Annotation 注册路由
-	Annotation(rb *RouteBuilder)
-}
-
 // Route 路由信息
 type Route struct {
 	Name    string
@@ -102,6 +97,8 @@ func (rb *RouteBuilder) registerRoute(method, path, name string, handler gin.Han
 		target.HEAD(path, handler)
 	case "OPTIONS":
 		target.OPTIONS(path, handler)
+	case "ANY":
+		target.Any(path, handler)
 	}
 
 	// 记录路由信息
@@ -142,64 +139,39 @@ func (rb *RouteBuilder) OPTIONS(path string, handler gin.HandlerFunc, name strin
 
 // ANY 注册所有HTTP方法路由
 func (rb *RouteBuilder) ANY(path string, handler gin.HandlerFunc, name string) {
-	if name == "" {
-		name = fmt.Sprintf("ANY:%s", path)
-	}
-
-	// 注册到gin
-	target := rb.getRouteTarget()
-	target.Any(path, handler)
-
-	// 记录路由信息
-	fullPath := rb.basePath + path
-
-	routesMutex.Lock()
-	routes[name] = &Route{
-		Name:    name,
-		Path:    fullPath,
-		Method:  "ANY",
-		Handler: handler,
-	}
-	routesMutex.Unlock()
+	rb.registerRoute("ANY", path, name, handler)
 }
 
-// BuildUrl 根据路由名称和参数生成URL
-func BuildUrl(name string, params ...map[string]any) string {
+// BuildUrl 根据路由名称和参数生成URL，路由不存在或缺少参数时返回错误
+func BuildUrl(name string, params ...map[string]any) (string, error) {
 	routesMutex.RLock()
 	route, exists := routes[name]
 	routesMutex.RUnlock()
 
 	if !exists {
-		panic(fmt.Errorf("路由不存在: %s", name))
+		return "", fmt.Errorf("路由不存在: %s", name)
 	}
 
 	path := route.Path
-	missingParams := []string{}
 
 	// 替换路径参数
 	if len(params) > 0 {
 		for key, value := range params[0] {
-			paramPlaceholder := ":" + key
-			if strings.Contains(path, paramPlaceholder) {
-				strValue := fmt.Sprintf("%v", value)
-				path = strings.ReplaceAll(path, paramPlaceholder, strValue)
-			}
+			path = strings.ReplaceAll(path, ":"+key, fmt.Sprintf("%v", value))
 		}
 	}
 
 	// 检查是否还有未替换的参数
 	if strings.Contains(path, ":") {
+		var missing []string
 		parts := strings.SplitSeq(path, "/")
 		for part := range parts {
 			if after, ok := strings.CutPrefix(part, ":"); ok {
-				missingParams = append(missingParams, after)
+				missing = append(missing, after)
 			}
 		}
+		return "", fmt.Errorf("缺少路径参数: %s", strings.Join(missing, ", "))
 	}
 
-	if len(missingParams) > 0 {
-		panic(fmt.Errorf("缺少路径参数: %s", strings.Join(missingParams, ", ")))
-	}
-
-	return path
+	return path, nil
 }

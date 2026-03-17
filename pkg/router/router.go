@@ -12,7 +12,6 @@ import (
 type Router struct {
 	Controllers []IController
 	Cfg         *config.Config
-	Middlewares []gin.HandlerFunc
 }
 
 // Route 设置路由
@@ -32,19 +31,13 @@ func (router *Router) Route() *gin.Engine {
 	// 添加全局中间件
 	r.Use(
 		middleware.Recovery(),
-		gin.Logger(),
-		middleware.Logger(),
+		middleware.Logger(cfg.IsDebug()),
 		middleware.SessionStart(
 			&router.Cfg.Session,
 			&router.Cfg.Redis,
 			&router.Cfg.Database,
 		),
 	)
-
-	// 添加自定义中间件
-	if len(router.Middlewares) > 0 {
-		r.Use(router.Middlewares...)
-	}
 
 	// 根据配置启用全局限流
 	if cfg.Server.EnableRateLimit {
@@ -62,9 +55,13 @@ func (router *Router) Route() *gin.Engine {
 		controller.Annotation(rb)
 	}
 
-	// 404处理
+	// 404处理：根据 Accept 头返回 JSON 或纯文本
 	r.NoRoute(func(c *gin.Context) {
-		c.AbortWithStatus(http.StatusNotFound)
+		if c.NegotiateFormat(gin.MIMEJSON, gin.MIMEHTML) == gin.MIMEJSON {
+			c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": "Not Found"})
+		} else {
+			c.AbortWithStatus(http.StatusNotFound)
+		}
 	})
 
 	return r
