@@ -9,11 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// InputType 定义 Input 函数支持的类型约束
+// InputType 定义 Input 函数支持的类型约束。
+// 使用精确类型而非 ~ 近似约束：函数内部按精确类型分发，
+// 若放开为派生类型会在运行时静默匹配失败，故在编译期就限定为这些精确类型。
+// 文件上传请使用 File / Files 函数。
 type InputType interface {
-	~string | ~int | ~int64 | ~float32 | ~float64 | ~bool |
-		~[]string | ~[]int | ~[]int64 |
-		*multipart.FileHeader | []*multipart.FileHeader
+	string | int | int64 | float32 | float64 | bool |
+		[]string | []int | []int64
 }
 
 // IsAjax 判断是否为 AJAX 请求
@@ -79,24 +81,10 @@ func IsMobile(c *gin.Context) bool {
 	return false
 }
 
-// GetClientIP 获取客户端真实 IP 地址
+// GetClientIP 获取客户端真实 IP 地址。
+// 委托给 gin.Context.ClientIP()，由其依据可信代理（TrustedProxies）配置安全地解析
+// X-Forwarded-For/X-Real-IP；不再直接信任可被伪造的转发头。
 func GetClientIP(c *gin.Context) string {
-	// 优先从 X-Real-IP 获取
-	clientIP := c.GetHeader("X-Real-IP")
-	if clientIP != "" {
-		return clientIP
-	}
-
-	// 从 X-Forwarded-For 获取（取第一个）
-	clientIP = c.GetHeader("X-Forwarded-For")
-	if clientIP != "" {
-		ips := strings.Split(clientIP, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
-	}
-
-	// 使用 Gin 的 ClientIP 方法
 	return c.ClientIP()
 }
 
@@ -253,47 +241,56 @@ func getRawValue(c *gin.Context, key string) string {
 }
 
 // getArrayValues 获取数组形式的字符串值（内部辅助函数）
-// 支持: ?key[]=a&key[]=b, ?key=a&key=b, ?key=a,b 等格式
+// 支持: ?key[]=a&key[]=b、?key=a&key=b、?key=a,b，以及两者混用（?key=a,b&key=c）
 func getArrayValues(c *gin.Context, key string) []string {
-	if v := c.QueryArray(key); len(v) > 0 {
-		return v
+	var raw []string
+	switch {
+	case len(c.QueryArray(key)) > 0:
+		raw = c.QueryArray(key)
+	case len(c.QueryArray(key+"[]")) > 0:
+		raw = c.QueryArray(key + "[]")
+	case len(c.PostFormArray(key)) > 0:
+		raw = c.PostFormArray(key)
+	case len(c.PostFormArray(key+"[]")) > 0:
+		raw = c.PostFormArray(key + "[]")
+	default:
+		return nil
 	}
-	if v := c.QueryArray(key + "[]"); len(v) > 0 {
-		return v
+
+	// 对取到的每个值再按逗号展开，使 ?key=a,b 与 ?key=a&key=b 两种形式都生效
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		for part := range strings.SplitSeq(item, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				out = append(out, part)
+			}
+		}
 	}
-	if v := c.PostFormArray(key); len(v) > 0 {
-		return v
+	if len(out) == 0 {
+		return nil
 	}
-	if v := c.PostFormArray(key + "[]"); len(v) > 0 {
-		return v
-	}
-	// 兜底：单值按逗号分割（支持 ?key=a,b,c 或 form key=a,b,c）
-	if v := c.Query(key); v != "" {
-		return strings.Split(v, ",")
-	}
-	if v := c.PostForm(key); v != "" {
-		return strings.Split(v, ",")
-	}
-	return nil
+	return out
 }
 
-// 优先级：POST > GET > URL Params > JSON Body
+// Input 按 key 读取请求参数并转换为目标类型 T，缺失或解析失败时返回默认值。
+//
+// 取值优先级：POST 表单 > Query > URL 路径参数（见 getRawValue / getArrayValues）。
+// 注意：不读取 JSON 请求体；JSON 请求请使用 BindJSON 绑定到结构体。
 //
 // 支持的类型：
 //   - 基本类型: string, int, int64, float32, float64, bool
 //   - 数组类型: []string, []int, []int64
-//   - 文件类型: *multipart.FileHeader, []*multipart.FileHeader
+//
+// 文件上传请使用 File / Files。
 //
 // 使用示例：
 //
-//	name := request.Input(c, "name", "默认名称")                              // string
-//	age := request.Input(c, "age", 18)                                      // int
-//	price := request.Input(c, "price", 9.99)                                // float64
-//	active := request.Input(c, "active", true)                              // bool
-//	tags := request.Input(c, "tags", []string{})                            // []string
-//	ids := request.Input(c, "ids", []int{})                                 // []int
-//	file := request.Input[*multipart.FileHeader](c, "avatar")               // 单个文件
-//	files := request.Input[*multipart.FileHeader](c, "images")              // 多个文件
+//	name := request.Input(c, "name", "默认名称")   // string
+//	age := request.Input(c, "age", 18)            // int
+//	price := request.Input(c, "price", 9.99)      // float64
+//	active := request.Input(c, "active", true)    // bool
+//	tags := request.Input(c, "tags", []string{})  // []string
+//	ids := request.Input(c, "ids", []int{})       // []int
 func Input[T InputType](c *gin.Context, key string, defaultValue ...T) T {
 	var def T
 	if len(defaultValue) > 0 {
@@ -301,18 +298,6 @@ func Input[T InputType](c *gin.Context, key string, defaultValue ...T) T {
 	}
 
 	switch any(def).(type) {
-	case *multipart.FileHeader:
-		if file, err := c.FormFile(key); err == nil {
-			return any(file).(T)
-		}
-
-	case []*multipart.FileHeader:
-		if form, err := c.MultipartForm(); err == nil {
-			if files, ok := form.File[key]; ok && len(files) > 0 {
-				return any(files).(T)
-			}
-		}
-
 	case []string:
 		if v := getArrayValues(c, key); v != nil {
 			return any(v).(T)
@@ -386,4 +371,21 @@ func Input[T InputType](c *gin.Context, key string, defaultValue ...T) T {
 	}
 
 	return def
+}
+
+// File 获取单个上传文件，不存在时返回 nil
+func File(c *gin.Context, key string) *multipart.FileHeader {
+	if file, err := c.FormFile(key); err == nil {
+		return file
+	}
+	return nil
+}
+
+// Files 获取同名的多个上传文件，不存在时返回 nil
+func Files(c *gin.Context, key string) []*multipart.FileHeader {
+	form, err := c.MultipartForm()
+	if err != nil {
+		return nil
+	}
+	return form.File[key]
 }

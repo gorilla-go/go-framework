@@ -28,6 +28,11 @@ func (router *Router) Route() *gin.Engine {
 	// 创建路由
 	r := gin.New()
 
+	// 配置可信代理：仅信任配置中的代理来源，避免 X-Forwarded-For 等转发头被伪造
+	if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
+		logger.Fatalf("配置可信代理失败: %v", err)
+	}
+
 	// 添加全局中间件
 	r.Use(
 		middleware.Recovery(),

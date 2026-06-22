@@ -55,6 +55,7 @@ func Controllers() []router.IController {
 }
 
 // 提供事件注册器
+// 返回全局事件总线，使依赖注入的 *EventBus 与 eventbus 包级 On/Emit/Off 共享同一份监听器
 func EventBus() *eventbus.EventBus {
-	return eventbus.New()
+	return eventbus.Default()
 }

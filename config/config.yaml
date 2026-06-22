@@ -8,6 +8,15 @@ server:
   enable_rate_limit: true # 是否启用全局限流
   rate_limit: 100 # 每秒最大请求数
   rate_burst: 200 # 突发情况下允许的最大请求数
+  # 可信代理列表（IP/CIDR）。仅当请求直接来源在此列表时才信任 X-Forwarded-For 等转发头。
+  # 非必填，可按需配置：
+  #   - 省略本项        → 用默认值 [127.0.0.1, ::1]，仅信任本机回环（同机反向代理）
+  #   - trusted_proxies: []                    → 关闭：忽略所有转发头，直接用对端真实 IP（无代理时最安全）
+  #   - trusted_proxies: [0.0.0.0/0, ::/0]     → 信任所有代理（仅限完全可控的内网网关后）
+  # 注意：填写非法 IP/CIDR 会导致启动失败。
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1
 
 # 日志配置
 log:
@@ -22,7 +31,7 @@ log:
 
 # 数据库配置
 database:
-  driver: mysql
+  driver: mysql  # mysql, sqlite
   host: localhost
   port: 3306
   username: root

@@ -48,17 +48,24 @@ func Fail(c *gin.Context, err *errors.AppError) {
 	c.Abort()
 }
 
+// Redirect 重定向到指定 URL，可选传入状态码（默认 302 Found）
+// 支持 301/302/303/307/308，传入非重定向状态码时回退为 302
 func Redirect(c *gin.Context, url string, status ...int) {
-	if len(status) > 0 && status[0] == 301 {
-		c.Redirect(http.StatusMovedPermanently, url)
-		c.Abort()
-		return
+	code := http.StatusFound // 302
+	if len(status) > 0 {
+		switch status[0] {
+		case http.StatusMovedPermanently, // 301
+			http.StatusFound,             // 302
+			http.StatusSeeOther,          // 303
+			http.StatusTemporaryRedirect, // 307
+			http.StatusPermanentRedirect: // 308
+			code = status[0]
+		}
 	}
 
-	c.Redirect(http.StatusFound, url)
+	c.Redirect(code, url)
 	c.Abort()
 }
-
 
 func BadRequest(c *gin.Context) {
 	Fail(c, errors.NewBadRequest("无效请求", nil))

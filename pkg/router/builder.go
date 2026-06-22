@@ -7,24 +7,43 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla-go/go-framework/pkg/config"
 	"github.com/gorilla-go/go-framework/pkg/errors"
+	"github.com/gorilla-go/go-framework/pkg/request"
 	"github.com/gorilla-go/go-framework/pkg/response"
 )
 
 // HandlerFunc 支持直接返回 error 的 handler 类型
 type HandlerFunc func(*gin.Context) error
 
-// wrapH 将 HandlerFunc 包装为标准 gin.HandlerFunc，统一在 router 层处理错误
+// wrapH 将 HandlerFunc 包装为标准 gin.HandlerFunc，统一在 router 层处理错误。
+//
+// 错误分流：
+//   - *errors.AppError（业务可预期错误）：始终走统一 JSON 响应（response.Fail）。
+//   - 其他非预期错误：API/AJAX 请求返回 JSON；页面请求则按 PHP 风格渲染错误页
+//     （debug 模式显示错误详情，生产模式显示通用 500 页），让错误直接显示在页面上。
 func wrapH(f HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := f(c); err != nil {
-			var appErr *errors.AppError
-			if stderrors.As(err, &appErr) {
-				response.Fail(c, appErr)
-			} else {
-				response.Fail(c, errors.NewInternalServerError(err.Error(), err))
-			}
+		err := f(c)
+		if err == nil {
+			return
 		}
+
+		var appErr *errors.AppError
+		if stderrors.As(err, &appErr) {
+			response.Fail(c, appErr)
+			return
+		}
+
+		// 页面（非 AJAX/JSON）请求：渲染 HTML 错误页，行为与 panic / 模板错误一致
+		if !request.IsAjax(c) {
+			errors.RenderError(c.Writer, err, "", config.MustFetch().IsDebug())
+			c.Abort()
+			return
+		}
+
+		// API 请求：保持统一 JSON 错误响应
+		response.Fail(c, errors.NewInternalServerError(err.Error(), err))
 	}
 }
 
@@ -175,11 +194,17 @@ func BuildUrl(name string, params ...map[string]any) (string, error) {
 
 	path := route.Path
 
-	// 替换路径参数
-	if len(params) > 0 {
-		for key, value := range params[0] {
-			path = strings.ReplaceAll(path, ":"+key, fmt.Sprintf("%v", value))
+	// 替换路径参数：按路径段精确匹配，避免 :id 误匹配 :idx 这类前缀冲突
+	if len(params) > 0 && len(params[0]) > 0 {
+		segments := strings.Split(path, "/")
+		for i, seg := range segments {
+			if name, ok := strings.CutPrefix(seg, ":"); ok {
+				if value, exists := params[0][name]; exists {
+					segments[i] = fmt.Sprintf("%v", value)
+				}
+			}
 		}
+		path = strings.Join(segments, "/")
 	}
 
 	// 检查是否还有未替换的参数

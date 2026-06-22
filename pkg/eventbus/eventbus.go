@@ -2,7 +2,6 @@ package eventbus
 
 import (
 	"reflect"
-	"sort"
 	"sync"
 )
 
@@ -44,24 +43,47 @@ func (eb *EventBus) Once(event string, handler EventHandler) {
 }
 
 // Emit 触发事件
+//
+// 在锁内完成两件事：认领待执行的处理函数、移除已认领的 once 监听器；
+// 随后在锁外执行处理函数，避免 handler 内部再调用 On/Off/Emit 造成死锁。
+// once 监听器通过 called 标志在锁的保护下"认领"，保证并发 Emit 下也只执行一次。
 func (eb *EventBus) Emit(event string, args ...interface{}) {
-	eb.mu.RLock()
-	entries := make([]*handlerEntry, len(eb.listeners[event]))
-	copy(entries, eb.listeners[event])
-	eb.mu.RUnlock()
-
-	// 执行所有处理函数，标记 once 条目
-	var onceIndexes []int
-	for i, entry := range entries {
-		entry.handler(args...)
-		if entry.once {
-			onceIndexes = append(onceIndexes, i)
-		}
+	eb.mu.Lock()
+	entries := eb.listeners[event]
+	if len(entries) == 0 {
+		eb.mu.Unlock()
+		return
 	}
 
-	// 移除已执行的 once 监听器
-	if len(onceIndexes) > 0 {
-		eb.removeOnceListeners(event, onceIndexes)
+	toRun := make([]EventHandler, 0, len(entries))
+	var remaining []*handlerEntry
+	for _, entry := range entries {
+		if entry.once {
+			// once 监听器只能被认领一次；已被其他 Emit 认领则跳过，且不保留
+			if entry.called {
+				continue
+			}
+			entry.called = true
+			toRun = append(toRun, entry.handler)
+			continue
+		}
+		toRun = append(toRun, entry.handler)
+		remaining = append(remaining, entry)
+	}
+
+	// 更新监听器列表：移除已认领的 once 监听器
+	if len(remaining) != len(entries) {
+		if len(remaining) == 0 {
+			delete(eb.listeners, event)
+		} else {
+			eb.listeners[event] = remaining
+		}
+	}
+	eb.mu.Unlock()
+
+	// 锁外执行处理函数
+	for _, handler := range toRun {
+		handler(args...)
 	}
 }
 
@@ -82,23 +104,6 @@ func (eb *EventBus) Off(event string, handler ...EventHandler) {
 			if reflect.ValueOf(entries[i].handler).Pointer() == hPtr {
 				entries = append(entries[:i], entries[i+1:]...)
 			}
-		}
-	}
-	eb.listeners[event] = entries
-}
-
-// removeOnceListeners 从大到小删除指定索引的条目，避免索引错位
-func (eb *EventBus) removeOnceListeners(event string, indexes []int) {
-	eb.mu.Lock()
-	defer eb.mu.Unlock()
-
-	// 从大到小排序，保证删除时不影响前面的索引
-	sort.Sort(sort.Reverse(sort.IntSlice(indexes)))
-
-	entries := eb.listeners[event]
-	for _, idx := range indexes {
-		if idx < len(entries) {
-			entries = append(entries[:idx], entries[idx+1:]...)
 		}
 	}
 	eb.listeners[event] = entries

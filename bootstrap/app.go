@@ -58,6 +58,29 @@ func printStartupBanner(cfg *config.Config) {
 	fmt.Printf("\n  %sPress Ctrl+C to stop%s\n\n", colorYellow, colorReset)
 }
 
+// weakSecrets 已知的占位/弱密钥集合
+var weakSecrets = map[string]bool{
+	"":                   true,
+	"your-secret-key":    true,
+	"secret-key":         true,
+	"session-secret-key": true,
+	"change-me":          true,
+}
+
+// warnInsecureConfig 在生产（release）模式下检测 JWT/Session 密钥是否为空或默认占位值，
+// 若是则发出安全告警，提示通过配置或环境变量设置强随机密钥。
+func warnInsecureConfig(cfg *config.Config) {
+	if cfg.IsDebug() {
+		return
+	}
+	if weakSecrets[cfg.JWT.Secret] {
+		logger.Warn("⚠️  安全告警: jwt.secret 为空或使用默认占位密钥，生产环境请通过环境变量 JWT_SECRET 设置强随机值")
+	}
+	if weakSecrets[cfg.Session.Secret] {
+		logger.Warn("⚠️  安全告警: session.secret 为空或使用默认占位密钥，生产环境请通过环境变量 SESSION_SECRET 设置强随机值")
+	}
+}
+
 // RegisterHooks 注册应用程序钩子
 func RegisterHooks(lifecycle fx.Lifecycle, router *gin.Engine, cfg *config.Config) {
 	lifecycle.Append(fx.Hook{
@@ -113,6 +136,9 @@ func NewApp() *fx.App {
 		fx.Invoke(func(cfg *config.Config) {
 			// 初始化日志
 			logger.InitLogger(&cfg.Log)
+
+			// 安全检查：生产模式下使用默认/空密钥时发出告警
+			warnInsecureConfig(cfg)
 
 			// 初始化模板引擎
 			template.InitTemplateManager(cfg.Template, Config().IsDebug())

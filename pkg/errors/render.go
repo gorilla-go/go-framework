@@ -23,6 +23,13 @@ type CodeLine struct {
 
 // RenderError 渲染 HTTP 错误到浏览器（用于 Recovery 中间件）
 func RenderError(w http.ResponseWriter, err error, stack string, isDevelopment bool) {
+	// 若响应体已部分写出（如处理器先写了内容再 panic / 返回错误），再写状态码或 HTML
+	// 会触发 "superfluous WriteHeader" 并把错误页拼到已发送内容后造成页面错乱。
+	// 此时放弃错误页渲染（panic 与堆栈已由上层日志留痕）。
+	if wc, ok := w.(interface{ Written() bool }); ok && wc.Written() {
+		return
+	}
+
 	if !isDevelopment {
 		// 生产模式：显示通用错误页面
 		renderProductionError(w)
@@ -525,7 +532,36 @@ func renderDevelopmentError(w http.ResponseWriter, err error, stack string) {
 	w.Write([]byte(errorHTML))
 }
 
+// productionErrorHTML 生产模式通用错误页（不泄漏任何内部细节）
+const productionErrorHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - 服务器内部错误</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            display: flex; align-items: center; justify-content: center; min-height: 100vh;
+            background: #f5f6f8; color: #333; }
+        .box { text-align: center; padding: 40px; }
+        .code { font-size: 72px; font-weight: 700; color: #c92a2a; line-height: 1; }
+        .msg { font-size: 18px; margin-top: 16px; color: #555; }
+        .hint { font-size: 14px; margin-top: 8px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="code">500</div>
+        <div class="msg">服务器开小差了，请稍后再试</div>
+        <div class="hint">如果问题持续出现，请联系网站管理员</div>
+    </div>
+</body>
+</html>`
+
 // renderProductionError 渲染生产模式错误页面
 func renderProductionError(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
+	_, _ = w.Write([]byte(productionErrorHTML))
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla-go/go-framework/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // 定义日志级别常量
@@ -82,14 +83,18 @@ func initZap(cfg *config.LogConfig) error {
 	}
 	fileEncoder := zapcore.NewJSONEncoder(fileEncoderCfg)
 
-	// 打开日志文件
-	logFile, err := os.OpenFile(cfg.Filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("打开日志文件失败: %w", err)
+	// 日志文件写入器：使用 lumberjack 实现按大小切割、保留份数、按天清理与压缩
+	logWriter := &lumberjack.Logger{
+		Filename:   cfg.Filename,
+		MaxSize:    cfg.MaxSize,    // 单个文件最大体积（MB）
+		MaxBackups: cfg.MaxBackups, // 保留的旧文件最大份数
+		MaxAge:     cfg.MaxAge,     // 旧文件最长保留天数
+		Compress:   cfg.Compress,   // 是否 gzip 压缩旧文件
+		LocalTime:  true,           // 切割文件名使用本地时间
 	}
 
 	// 文件 Core
-	fileCore := zapcore.NewCore(fileEncoder, zapcore.AddSync(logFile), atomicLevel)
+	fileCore := zapcore.NewCore(fileEncoder, zapcore.AddSync(logWriter), atomicLevel)
 
 	// 根据配置决定是否同时输出到控制台
 	var core zapcore.Core

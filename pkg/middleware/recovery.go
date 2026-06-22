@@ -19,13 +19,8 @@ func Recovery() gin.HandlerFunc {
 				stack := debug.Stack()
 				cfg := config.MustFetch()
 
-				if !cfg.IsDebug() {
-					logger.Errorf(
-						"%s\n%s",
-						fmt.Sprintf("panic recovered: %v", r),
-						string(stack),
-					)
-				}
+				// 始终记录 panic 与堆栈：debug 模式虽会渲染到页面，但日志同样需要留痕
+				logger.Errorf("panic recovered: %v\n%s", r, string(stack))
 
 				errors.RenderError(
 					c.Writer,

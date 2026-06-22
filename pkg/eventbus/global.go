@@ -3,6 +3,13 @@ package eventbus
 // 全局事件总线实例
 var defaultEventBus = New()
 
+// Default 返回全局事件总线实例。
+// 用于让依赖注入得到的 *EventBus 与全局 On/Emit/Off 等函数共享同一份监听器，
+// 避免出现"注入的总线"和"全局总线"两套互不相通的状态。
+func Default() *EventBus {
+	return defaultEventBus
+}
+
 // On 在全局事件总线上注册事件监听器
 func On(event string, handler EventHandler) {
 	defaultEventBus.On(event, handler)
